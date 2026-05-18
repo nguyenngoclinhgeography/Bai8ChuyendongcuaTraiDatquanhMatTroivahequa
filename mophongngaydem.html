@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Độ Dài Ngày Đêm Theo Mùa</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #020208; color: #fff; font-family: sans-serif; }
+        #canvas3d { width: 100vw; height: 100vh; display: block; }
+        
+        /* Giao diện bảng điều khiển */
+        .ui-panel { 
+            position: absolute; 
+            background: rgba(6, 10, 26, 0.92); 
+            padding: 15px; 
+            border-radius: 14px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.7); 
+            border: 1px solid #1e293b; 
+            z-index: 10; 
+        }
+        
+        h1 { font-size: 1.1em; margin-top: 0; margin-bottom: 10px; color: #38bdf8; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        button { flex: 1; padding: 8px 4px; border: none; border-radius: 6px; background: #1e293b; color: #94a3b8; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.85em; }
+        button.active { background: #38bdf8; color: #0f172a; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+        
+        .slider-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; color: #94a3b8; font-size: 0.8em; }
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        /* Bảng phân tích động */
+        .analysis-box { background: rgba(255,255,255,0.04); padding: 10px; border-radius: 8px; font-size: 0.82em; line-height: 1.45; border-left: 4px solid #38bdf8; }
+        .analysis-box h3 { margin: 0 0 6px 0; color: #f59e0b; font-size: 1em; }
+        .analysis-box p { margin: 4px 0; }
+        .highlight-day { color: #fde047; font-weight: bold; }
+        .highlight-night { color: #a78bfa; font-weight: bold; }
+
+        /* Giao diện chuẩn trên Máy tính */
+        @media (min-width: 769px) {
+            .ui-panel { top: 20px; right: 20px; width: 340px; } /* Đổi sang bên phải cho đỡ vướng Mặt Trời bên trái */
+        }
+
+        /* Giao diện tối ưu trên Điện thoại */
+        @media (max-width: 768px) {
+            .ui-panel { bottom: 10px; left: 10px; right: 10px; padding: 10px; }
+            h1 { font-size: 0.95em; margin-bottom: 6px; }
+            .btn-group { margin-bottom: 8px; }
+            button { padding: 6px 2px; font-size: 0.78em; }
+            .slider-group { margin-bottom: 6px; }
+            .analysis-box { font-size: 0.75em; padding: 6px; }
+            .analysis-box h3 { font-size: 0.85em; margin-bottom: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-panel">
+        <h1 id="mainTitle">Độ dài ngày - đêm theo mùa</h1>
+        
+        <div class="btn-group">
+            <button id="btnJune" class="active" onclick="changeDate(0)">Ngày 22 tháng 6</button>
+            <button id="btnDecember" onclick="changeDate(180)">Ngày 22 tháng 12</button>
+        </div>
+        
+        <div class="slider-group">
+            <label for="dateSlider">Kéo thanh trượt để đổi mùa giải thích liên tục:</label>
+            <input type="range" id="dateSlider" min="0" max="180" step="1" value="0">
+        </div>
+
+        <div class="analysis-box">
+            <h3 id="dateStatus">Ngày 22/6 (Hạ chí)</h3>
+            <div id="detailsContent">Đang tính toán dữ liệu quang học...</div>
+        </div>
+    </div>
+
+    <canvas id="canvas3d"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // 1. Khởi tạo môi trường 3D cơ bản
+        const canvas = document.getElementById('canvas3d');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        if(window.innerWidth < 768) {
+            camera.position.set(0, 0, 38); // Góc nhìn điện thoại rộng hơn tí
+        } else {
+            camera.position.set(0, 0, 28); // Góc nhìn máy tính chính diện
+        }
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Ánh sáng không gian giúp nhìn thấy phần ban đêm nhưng vẫn tối mờ mờ
+        scene.add(new THREE.AmbientLight(0x222233));
+
+        // 2. TẠO MẶT TRỜI TRỰC QUAN Ở BÊN TRÁI
+        const sunCanvas = document.createElement('canvas');
+        sunCanvas.width = 128; sunCanvas.height = 128;
+        const sunCtx = sunCanvas.getContext('2d');
+        let sunGrad = sunCtx.createRadialGradient(64, 64, 10, 64, 64, 64);
+        sunGrad.addColorStop(0, '#ffffff');
+        sunGrad.addColorStop(0.3, '#ffaa00');
+        sunGrad.addColorStop(1, '#ff3300');
+        sunCtx.fillStyle = sunGrad; sunCtx.fillRect(0, 0, 128, 128);
+
+        const sunMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(4.5, 32, 32),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sunCanvas) })
+        );
+        sunMesh.position.set(-14, 0, 0); // Đặt cố định ở bìa trái màn hình
+        scene.add(sunMesh);
+
+        // Ánh sáng phát ra từ vị trí Mặt Trời chiếu sang Trái Đất
+        const sunLight = new THREE.DirectionalLight(0xffffff, 3.0);
+        sunLight.position.set(-1, 0, 0); // Chiếu từ trái qua phải
+        scene.add(sunLight);
+
+        // 3. THIẾT LẬP TRÁI ĐẤT MÀU SẮC RÕ RÀNG (Sửa lỗi tối đen)
+        const earthCanvas = document.createElement('canvas');
+        earthCanvas.width = 1024; earthCanvas.height = 512;
+        const earthCtx = earthCanvas.getContext('2d');
+        
+        // Nền nước biển màu xanh tươi sáng hơn
+        earthCtx.fillStyle = '#1d4ed8'; earthCtx.fillRect(0, 0, 1024, 512); 
+        
+        // Vẽ bản đồ lục địa to, sáng để khi ánh sáng chiếu vào nhìn rõ mồn một
+        earthCtx.fillStyle = '#22c55e'; // Màu xanh lá cây của đất liền
+        function drawBigLand(x, y, w, h) {
+            earthCtx.beginPath();
+            earthCtx.roundRect(x, y, w, h, 40);
+            earthCtx.fill();
+            // Thêm chút đốm vàng sa mạc cho sinh động
+            earthCtx.fillStyle = '#eab308';
+            earthCtx.beginPath();
+            earthCtx.arc(x + w/2, y + h/2, Math.min(w,h)/3, 0, Math.PI*2);
+            earthCtx.fill();
+            earthCtx.fillStyle = '#22c55e'; // Trả lại màu xanh
+        }
+        drawBigLand(100, 80, 250, 180);  // Khối lục địa 1
+        drawBigLand(180, 280, 180, 180); // Khối lục địa 2
+        drawBigLand(600, 100, 300, 200); // Khối lục địa 3
+        drawBigLand(700, 320, 150, 120); // Khối lục địa 4
+
+        const earthTexture = new THREE.CanvasTexture(earthCanvas);
+        const earthMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(5.2, 40, 40), // Thu nhỏ Trái Đất tí để nhường chỗ cho Mặt Trời
+            new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.5, metalness: 0.1 })
+        );
+
+        // 4. ĐƯỜNG VĨ TUYẾN VÀ TRỤC NGHIÊNG CỐ ĐỊNH
+        const linesGroup = new THREE.Group();
+
+        function addLatitude(y, color) {
+            const radius = Math.sqrt(5.2*5.2 - y*y);
+            const points = [];
+            for (let i = 0; i <= 64; i++) {
+                const theta = (i / 64) * Math.PI * 2;
+                points.push(new THREE.Vector3(Math.cos(theta) * radius, y, Math.sin(theta) * radius));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.65 });
+            const line = new THREE.Line(geometry, material);
+            linesGroup.add(line);
+        }
+
+        // Tạo 5 vĩ tuyến mốc dựa theo kích thước bán kính 5.2
+        addLatitude(0, 0xffffff);       // Xích đạo
+        addLatitude(2.06, 0xf59e0b);    // Chí tuyến Bắc
+        addLatitude(-2.06, 0xf59e0b);   // Chí tuyến Nam
+        addLatitude(4.44, 0x38bdf8);    // Vòng cực Bắc
+        addLatitude(-4.44, 0x38bdf8);   // Vòng cực Nam
+
+        // Trục quay đỏ nghiêng cố định
+        const axisGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -7.5, 0), new THREE.Vector3(0, 7.5, 0)]);
+        const axisLine = new THREE.Line(axisGeom, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
+        linesGroup.add(axisLine);
+
+        // Đóng gói Trái Đất nghiêng góc trục Z = 23.5 độ
+        const earthSystem = new THREE.Group();
+        earthSystem.add(earthMesh);
+        earthSystem.add(linesGroup);
+        earthSystem.rotation.z = 0.41; 
+        scene.add(earthSystem);
+        earthSystem.position.set(4, 0, 0); // Đẩy qua phải để tạo khoảng cách với Mặt Trời
+
+        // 5. ĐƯỜNG PHÂN CHIA SÁNG TỐI (Terminator - Vòng tròn trắng nét đứt)
+        const terminatorGeom = new THREE.BufferGeometry();
+        const termPoints = [];
+        for(let i=0; i<=64; i++) {
+            const angle = (i/64) * Math.PI * 2;
+            termPoints.push(new THREE.Vector3(0, Math.cos(angle)*5.25, Math.sin(angle)*5.25));
+        }
+        terminatorGeom.setFromPoints(termPoints);
+        const terminatorLine = new THREE.Line(terminatorGeom, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.3, gapSize: 0.15 }));
+        terminatorLine.computeLineDistances();
+        scene.add(terminatorLine);
+        terminatorLine.position.copy(earthSystem.position); // Luôn đứng yên tại vị trí Trái Đất
+
+        // 6. Logic điều khiển và bảng chữ phân tích Địa lí
+        const slider = document.getElementById('dateSlider');
+        const dateStatus = document.getElementById('dateStatus');
+        const detailsContent = document.getElementById('detailsContent');
+        const btnJune = document.getElementById('btnJune');
+        const btnDecember = document.getElementById('btnDecember');
+
+        function updatePhenomenon() {
+            const val = parseInt(slider.value);
+            // Xoay hệ thống Trái Đất theo trục Y để thay đổi hướng ngả của trục so với Mặt Trời bên trái
+            earthSystem.rotation.y = (val / 180) * Math.PI;
+
+            if (val < 45) {
+                dateStatus.innerText = "Ngày 22 tháng 6 (Hạ chí)";
+                detailsContent.innerHTML = `
+                    <p>• <strong>Xích đạo:</strong> Ngày và đêm <span class="highlight-day">luôn bằng nhau (12h)</span>.</p>
+                    <p>• <strong>Bán cầu Bắc:</strong> Ngả về phía Mặt Trời nên diện tích chiếu sáng lớn -> <span class="highlight-day">Ngày dài, đêm ngắn</span>. Từ Vòng cực Bắc đến Cực Bắc có hiện tượng <span class="highlight-day">Ngày dài suốt 24 giờ</span>.</p>
+                    <p>• <strong>Bán cầu Nam:</strong> Chếch xa Mặt Trời -> <span class="highlight-night">Ngày ngắn, đêm dài</span>. Vùng từ Vòng cực Nam đến Cực Nam hoàn toàn là <span class="highlight-night">Đêm suốt 24 giờ</span>.</p>
+                `;
+                btnJune.classList.add('active'); btnDecember.classList.remove('active');
+            } else if (val > 135) {
+                dateStatus.innerText = "Ngày 22 tháng 12 (Đông chí)";
+                detailsContent.innerHTML = `
+                    <p>• <strong>Xích đạo:</strong> Ngày và đêm <span class="highlight-day">luôn bằng nhau (12h)</span>.</p>
+                    <p>• <strong>Bán cầu Bắc:</strong> Chếch xa Mặt Trời -> <span class="highlight-night">Ngày ngắn, đêm dài</span>. Từ Vòng cực Bắc đến Cực Bắc là <span class="highlight-night">Đêm dài suốt 24 giờ</span>.</p>
+                    <p>• <strong>Bán cầu Nam:</strong> Ngả về phía Mặt Trời -> <span class="highlight-day">Ngày dài, đêm ngắn</span>. Từ Vòng cực Nam đến Cực Nam có <span class="highlight-day">Ngày dài suốt 24 giờ</span>.</p>
+                `;
+                btnJune.classList.remove('active'); btnDecember.classList.add('active');
+            } else {
+                dateStatus.innerText = "Giai đoạn chuyển tiếp (Xuân phân / Thu phân)";
+                detailsContent.innerHTML = `
+                    <p>• <strong>Toàn cầu:</strong> Đường phân chia sáng tối đi qua chính xác hai cực Trái Đất.</p>
+                    <p>• <strong>Kết quả:</strong> Tất cả mọi nơi trên Trái Đất đều có thời gian <span class="highlight-day">Ngày bằng Đêm (đều dài đúng 12 giờ)</span>.</p>
+                `;
+                btnJune.classList.remove('active'); btnDecember.classList.remove('active');
+            }
+        }
+
+        function changeDate(targetValue) {
+            slider.value = targetValue;
+            updatePhenomenon();
+        }
+
+        slider.addEventListener('input', updatePhenomenon);
+        updatePhenomenon(); 
+
+        // 7. Hoạt ảnh tự quay quanh trục nhẹ nhàng
+        function animate() {
+            requestAnimationFrame(animate);
+            earthMesh.rotation.y += 0.002; // Trái Đất tự quay liên tục để học sinh ngắm các mặt
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Tự co giãn giao diện theo màn hình máy tính/điện thoại
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            terminatorLine.position.copy(earthSystem.position);
+        });
+    </script>
+</body>
+</html>

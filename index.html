@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho Tư Liệu Mô Phỏng Địa Lí</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2.2em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+
+        p.subtitle {
+            color: #94a3b8;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            justify-content: center;
+        }
+
+        .menu-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 30px 20px;
+            text-decoration: none;
+            color: #ffffff;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .menu-card:hover {
+            transform: translateY(-8px);
+            border-color: #38bdf8;
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 15px 30px rgba(56, 189, 248, 0.2);
+        }
+
+        .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .menu-card h2 {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: #f1f5f9;
+        }
+
+        .menu-card p {
+            font-size: 0.9em;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Giao diện điện thoại */
+        @media (max-width: 480px) {
+            h1 { font-size: 1.6em; }
+            p.subtitle { font-size: 0.9em; margin-bottom: 25px; }
+            .menu-grid { gap: 15px; }
+            .menu-card { padding: 20px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Kho Ứng Dụng Mô Phỏng Địa Lí</h1>
+        <p class="subtitle">Bấm vào từng ô dưới đây để bắt đầu tương tác 3D</p>
+
+        <div class="menu-grid">
+            <a href="mophongdtmt.html" class="menu-card">
+                <div class="icon">🌍</div>
+                <h2>Trái Đất chuyển động quanh Mặt Trời</h2>
+                <p>Tương tác sự chuyển động của Trái Đất quanh Mặt Trời.</p>
+            </a>
+
+            <a href="mophongngaydem.html" class="menu-card">
+                <div class="icon">☀️</div>
+                <h2>Góc chiếu của tia sáng Mặt Trời tới Trái Đất</h2>
+                <p>Tương tác các góc chiếu của tia sáng Mặt Trời tới Trái Đất.</p>
+            </a>
+
+            <a href="mophong3.html" class="menu-card">
+                <div class="icon">🌙</div>
+                <h2>Độ dài ban ngày và ban đêm trên Trái Đất</h2>
+                <p>Tương tác về độ dài ngày và đêm trên Trái Đất.</p>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
