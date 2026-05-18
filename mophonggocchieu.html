@@ -33,6 +33,23 @@
         .info-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.85em; line-height: 1.4; border-left: 4px solid #f59e0b; }
         .info-box strong { color: #f43f5e; }
 
+        /* Dòng chữ Tia Sáng Mặt Trời chuẩn SGK */
+        .sun-ray-text {
+            position: absolute;
+            top: 50%;
+            left: 31%;
+            transform: translate(-50%, -50%);
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 1.1em;
+            letter-spacing: 2px;
+            writing-mode: vertical-lr;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+            pointer-events: none;
+            z-index: 5;
+        }
+
         /* Giao diện cho Máy tính */
         @media (min-width: 769px) {
             .ui-panel { top: 20px; left: 20px; width: 320px; }
@@ -45,6 +62,11 @@
             .btn-group { margin-bottom: 8px; }
             .slider-group { margin-bottom: 8px; }
             .info-box { font-size: 0.75em; padding: 6px; }
+            .sun-ray-text {
+                top: 35%;
+                left: 15%;
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
@@ -69,6 +91,8 @@
         </div>
     </div>
 
+    <div class="sun-ray-text">TIA SÁNG MẶT TRỜI</div>
+
     <canvas id="canvas3d"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -79,36 +103,33 @@
         const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
         
         if(window.innerWidth < 768) {
-            camera.position.set(0, 5, 45); // Góc nhìn điện thoại
+            camera.position.set(0, 5, 45);
         } else {
-            camera.position.set(0, 0, 35); // Góc nhìn máy tính chính diện trực quan
+            camera.position.set(0, 0, 35);
         }
 
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        // Ánh sáng dịu nhẹ để học sinh thấy phần bán cầu tối (Đêm)
         scene.add(new THREE.AmbientLight(0x222233));
 
-        // 2. Tạo hệ thống TIA SÁNG MẶT TRỜI SONG SONG (Mũi tên đỏ)
+        // 2. Tạo hệ thống TIA SÁNG MẶT TRỜI SONG SONG (Đã rút ngắn độ dài)
         const rayGroup = new THREE.Group();
         scene.add(rayGroup);
 
         function createSunRays() {
-            // Xóa tia cũ nếu có
             while(rayGroup.children.length > 0){ rayGroup.remove(rayGroup.children[0]); }
 
-            const rayColor = 0xef4444; // Màu đỏ đặc trưng trong sơ đồ
-            const arrowLength = 8;
+            const rayColor = 0xef4444; 
+            const arrowLength = 6; // Rút ngắn lại thành 5 chống tràn menu
             const headLength = 0.8;
             const headWidth = 0.4;
 
-            // Tạo các tia sáng song song phân bổ từ trên xuống dưới
-            for (let y = -10; y <= 10; y += 2.5) {
-                const origin = new THREE.Vector3(-18, y, 0);
-                const dir = new THREE.Vector3(1, 0, 0).normalize(); // Chiếu thẳng từ trái sang phải
-                
+            for (let y = -6; y <= 6; y += 2) {
+                const origin = new THREE.Vector3(-12, y, 0); // Dời dịch chuyển sang phải một chút
+                const dir = new THREE.Vector3(1, 0, 0).normalize();
+            
                 const arrowHelper = new THREE.ArrowHelper(dir, origin, arrowLength, rayColor, headLength, headWidth);
                 rayGroup.add(arrowHelper);
             }
@@ -128,27 +149,27 @@
         function drawMapBlock(x, y, w, h) {
             earthCtx.beginPath(); earthCtx.roundRect(x, y, w, h, 20); earthCtx.fill();
         }
-        drawMapBlock(50, 40, 120, 80);  // Bắc Mỹ / Á Âu
-        drawMapBlock(80, 130, 80, 90);  // Nam Mỹ / Châu Phi
-        drawMapBlock(280, 50, 160, 70); // Khối Á Âu lớn
-        drawMapBlock(360, 140, 70, 50); // Ô-xtrây-li-a
+        drawMapBlock(50, 40, 120, 80);  
+        drawMapBlock(80, 130, 80, 90);  
+        drawMapBlock(280, 50, 160, 70); 
+        drawMapBlock(360, 140, 70, 50); 
 
         const earthTexture = new THREE.CanvasTexture(earthCanvas);
+        // SỬA ĐỔI VẬT LIỆU TẠI ĐÂY (Roughness xuống 0.2, Metalness lên 0.4)
         const earthMesh = new THREE.Mesh(
             new THREE.SphereGeometry(6, 40, 40),
-            new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.8 })
+            new THREE.MeshStandardMaterial({ 
+                map: earthTexture, 
+                roughness: 0.2, // Giảm roughness để bề mặt bóng hơn
+                metalness: 0.4  // Tăng metalness nhẹ để tạo độ bóng
+            })
         );
 
-        // Ánh sáng hướng phát ra từ "Mặt Trời phía bên trái"
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
-        sunLight.position.set(-1, 0, 0); // Chiếu từ trái sang phải
-        scene.add(sunLight);
-
-        // 4. Các ĐƯỜNG VĨ TUYẾN CHÍNH (Đường nét đứt chuẩn sư phạm)
+        // 4. Các ĐƯỜNG VĨ TUYẾN CHÍNH
         const linesGroup = new THREE.Group();
         
-        function createLatitudeLine(y, color, labelText) {
-            const radius = Math.sqrt(6*6 - y*y); // Tính bán kính đường tròn vĩ tuyến tại độ cao y
+        function createLatitudeLine(y, color) {
+            const radius = Math.sqrt(6*6 - y*y); 
             const points = [];
             for (let i = 0; i <= 64; i++) {
                 const theta = (i / 64) * Math.PI * 2;
@@ -160,31 +181,37 @@
             linesGroup.add(line);
         }
 
-        // Tạo 5 đường vĩ tuyến mốc quan trọng giống hình 2 sách giáo khoa
-        createLatitudeLine(0, 0xffffff);      // Xích đạo (Trắng)
-        createLatitudeLine(2.38, 0xf59e0b);   // Chí tuyến Bắc 23°27' (Vàng)
-        createLatitudeLine(-2.38, 0xf59e0b);  // Chí tuyến Nam 23°27' (Vàng)
-        createLatitudeLine(5.12, 0x38bdf8);   // Vòng cực Bắc 66°33' (Xanh lam)
-        createLatitudeLine(-5.12, 0x38bdf8);  // Vòng cực Nam 66°33' (Xanh lam)
+        createLatitudeLine(0, 0xffffff);      
+        createLatitudeLine(2.38, 0xf59e0b);   
+        createLatitudeLine(-2.38, 0xf59e0b);  
+        createLatitudeLine(5.12, 0x38bdf8);   
+        createLatitudeLine(-5.12, 0x38bdf8);  
 
-        // Trục Trái Đất màu đỏ nghiêng
         const axisGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, -9, 0), new THREE.Vector3(0, 9, 0)
         ]);
         const axisLine = new THREE.Line(axisGeometry, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
         linesGroup.add(axisLine);
 
-        // Đóng gói hệ thống Trái Đất để nghiêng góc 23.5 độ cố định KHÔNG ĐỔI HƯỚNG
+        // Đóng gói hệ thống Trái Đất
         const earthSystem = new THREE.Group();
         earthSystem.add(earthMesh);
         earthSystem.add(linesGroup);
         
-        // Nghiêng trục theo trục Z để thể hiện rõ góc nghiêng so với mặt phẳng quỹ đạo
-        earthSystem.rotation.z = 0.41; // ~23.5 độ
+        earthSystem.rotation.z = 0.41; 
         scene.add(earthSystem);
 
-        // Đẩy Trái Đất sang phải một chút để nhường không gian cho tia sáng chiếu vào
         earthSystem.position.set(4, 0, 0);
+
+        // THAY THẾ NGUỒN ÁNH SÁNG CŨ BẰNG ÁNH SÁNG TẬP TRUNG (Spotlight)
+        // Ánh sáng TẬP TRUNG để tạo điểm nồng rực rỡ chuẩn SGK
+        const sunLight = new THREE.SpotLight(0xffffff, 8); 
+        sunLight.position.set(-20, 0, 10); // Đặt đèn xa hơn và hơi xéo để tạo điểm sáng đẹp
+        sunLight.target = earthMesh; 
+        sunLight.angle = Math.PI / 8; 
+        sunLight.penumbra = 0.5; 
+        sunLight.decay = 2; 
+        scene.add(sunLight);
 
         // 5. Xử lý logic tương tác Địa lí
         const slider = document.getElementById('dateSlider');
@@ -195,12 +222,8 @@
 
         function updateSimulation() {
             const val = parseInt(slider.value);
-            
-            // Mô phỏng sự di chuyển quỹ đạo bằng cách xoay nhẹ toàn bộ hệ thống Trái Đất quanh trục Y
-            // Điều này làm thay đổi phần bán cầu ngả về phía luồng ánh sáng cố định từ bên trái!
             earthSystem.rotation.y = (val / 180) * Math.PI;
 
-            // Cập nhật bảng chữ phân tích động tùy thuộc vào vị trí thanh trượt
             if (val < 45) {
                 statusTitle.innerText = "Ngày 22 tháng 6 (Hạ chí)";
                 analysisText.innerHTML = "• <strong>Bán cầu Bắc</strong> đang ngả về phía Mặt Trời, có góc chiếu của tia sáng lớn, nhận được nhiều ánh sáng và nhiệt -> <strong>Mùa nóng</strong>.<br>• <strong>Bán cầu Nam</strong> chếch xa Mặt Trời, góc chiếu nhỏ, nhận ít nhiệt -> <strong>Mùa lạnh</strong>.";
@@ -241,19 +264,16 @@
         }
 
         slider.addEventListener('input', updateSimulation);
-        
-        // Khởi động bản phân tích đầu tiên
         updateSimulation();
 
-        // 6. Vòng lặp Render hình ảnh tĩnh (Chỉ xoay nhẹ Trái Đất tự quay quanh trục để nhìn sinh động)
+        // 6. Vòng lặp Render
         function animate() {
             requestAnimationFrame(animate);
-            earthMesh.rotation.y += 0.002; // Tự quay nhẹ quanh trục để học sinh thấy các mặt lục địa
+            earthMesh.rotation.y += 0.002; 
             renderer.render(scene, camera);
         }
         animate();
 
-        // Tự co giãn màn hình khi đổi thiết bị
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
