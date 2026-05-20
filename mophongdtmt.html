@@ -7,17 +7,8 @@
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #020208; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas3d { width: 100vw; height: 100vh; display: block; }
-        .ui-panel { position: absolute; top: 20px; left: 20px; background: rgba(10, 10, 15, 0.85); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px); box-shadow: 0 5px 25px rgba(0,0,0,0.8); border: 1px solid #1e293b; max-width: 350px; z-index: 10; }
-        h1 { font-size: 1.4em; margin-top: 0; color: #f59e0b; }
-        p { font-size: 0.9em; color: #94a3b8; line-height: 1.5; }
-        .controls { margin-top: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #38bdf8; font-size: 0.9em; }
-        input[type=range] { width: 100%; margin-bottom: 20px; cursor: pointer; }
-        .status-panel { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 10, 15, 0.85); padding: 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 10; }
-        #localTimeLabel { font-size: 1em; }
-        span.highlight { color: #f59e0b; font-weight: bold; }
-
-       /* BẢN NÂNG CẤP: TỰ ĐỘNG DI CHUYỂN THEO THIẾT BỊ */
+        
+        /* BẢN NÂNG CẤP: TỰ ĐỘNG DI CHUYỂN THEO THIẾT BỊ */
         .ui-panel { 
             position: absolute; 
             background: rgba(5, 5, 10, 0.85); 
@@ -29,55 +20,71 @@
         }
         
         h1 { font-size: 1.2em; margin-top: 0; margin-bottom: 10px; color: #f39c12; text-align: center; }
+        p { font-size: 0.85em; color: #94a3b8; line-height: 1.4; margin-bottom: 10px; }
         .controls { display: flex; flex-direction: column; }
-        .control-group { margin-bottom: 10px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #38bdf8; font-size: 0.85em; }
-        input[type=range] { width: 100%; cursor: pointer; margin: 0; }
+        input[type=range] { width: 100%; cursor: pointer; margin-bottom: 10px; }
+
+        /* Khung hiển thị tên hành tinh khi click */
+        .info-popup {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+            max-width: 280px;
+        }
+        .info-popup h3 { margin: 0 0 5px 0; color: #38bdf8; font-size: 1.1em; text-transform: uppercase; }
+        .info-popup p { margin: 0; color: #cbd5e1; font-size: 0.85em; line-height: 1.4; }
+
+        .status-panel { position: absolute; bottom: 20px; left: 20px; background: rgba(10, 10, 15, 0.85); padding: 10px 15px; border-radius: 8px; border: 1px solid #1e293b; z-index: 10; }
+        #localTimeLabel { font-size: 0.9em; }
+        span.highlight { color: #f59e0b; font-weight: bold; }
 
         /* Giao diện chuẩn cho MÁY TÍNH (Màn hình rộng) */
         @media (min-width: 769px) {
-            .ui-panel {
-                top: 20px; 
-                left: 20px; 
-                max-width: 300px;
-            }
+            .ui-panel { top: 20px; left: 20px; max-width: 300px; }
         }
 
         /* Giao diện đặc trị cho ĐIỆN THOẠI (Màn hình hẹp đứng) */
         @media (max-width: 768px) {
-            .ui-panel {
-                bottom: 10px; /* Đẩy xuống đáy màn hình */
-                left: 10px;
-                right: 10px;
-                padding: 10px 15px;
-            }
+            .ui-panel { bottom: 10px; left: 10px; right: 10px; padding: 10px 15px; top: auto; }
             h1 { font-size: 1em; margin-bottom: 5px; }
-            .controls { 
-                flex-direction: row; /* Xếp hai thanh kéo nằm ngang nhau cho tiết kiệm chỗ */
-                gap: 15px;
-            }
-            .control-group { 
-                flex: 1; 
-                margin-bottom: 0;
-            }
+            .controls { flex-direction: row; gap: 15px; }
             label { font-size: 0.75em; margin-bottom: 2px; }
+            .info-popup { top: 10px; right: 10px; left: 10px; max-width: none; }
+            .status-panel { display: none; } /* Ẩn bớt giờ trên điện thoại cho đỡ chật */
         }
     </style>
 </head>
 <body>
 
-
     <div class="ui-panel">
-        <h1>Mô phỏng Trái Đất chuyển động quanh Mặt Trời 3D</h1>
-        <p><b> Trục Trái Đất nghiêng 23.5° (màu đỏ) và Đường quỹ đạo chuyển động quanh Mặt Trời (màu trắng).</p>
+        <h1>Mô phỏng Trái Đất quanh Mặt Trời 3D</h1>
+        <p><b>Mẹo học tập:</b> Bạn có thể kéo chuột để xoay không gian, cuộn chuột để zoom và click trực tiếp vào thiên thể để xem tên!</p>
         
         <div class="controls">
-            <label for="spinSpeedSlider">Tốc độ Trái Đất tự quay (Ngày/Đêm):</label>
-            <input type="range" id="spinSpeedSlider" min="0" max="0.1" step="0.002" value="0.02">
+            <div style="flex:1;">
+                <label for="spinSpeedSlider">Tốc độ Trái Đất tự quay (Ngày/Đêm):</label>
+                <input type="range" id="spinSpeedSlider" min="0" max="0.1" step="0.002" value="0.02">
+            </div>
             
-            <label for="orbitSpeedSlider">Tốc độ Trái Đất quay quanh Mặt Trời:</label>
-            <input type="range" id="orbitSpeedSlider" min="0" max="0.02" step="0.0005" value="0.003">
+            <div style="flex:1;">
+                <label for="orbitSpeedSlider">Tốc độ quay quanh Mặt Trời:</label>
+                <input type="range" id="orbitSpeedSlider" min="0" max="0.02" step="0.0005" value="0.003">
+            </div>
         </div>
+    </div>
+
+    <div id="infoPopup" class="info-popup">
+        <h3 id="popupTitle">Tên Hành Tinh</h3>
+        <p id="popupDesc">Mô tả hành tinh...</p>
     </div>
 
     <div class="status-panel">
@@ -87,16 +94,24 @@
     <canvas id="canvas3d"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         const canvas = document.getElementById('canvas3d');
         const scene = new THREE.Scene();
         
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 35, 70); // Nâng camera lên cao một chút để nhìn rõ đường quỹ đạo tròn
+        camera.position.set(0, 35, 70); 
 
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+
+        // KÍCH HOẠT TÍNH NĂNG XOAY ĐIỀU KHIỂN CAMERA
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 150;
+        controls.minDistance = 15;
 
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
@@ -134,7 +149,7 @@
         const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
         scene.add(sunMesh);
 
-        // --- BỔ SUNG ĐƯỜNG QUỸ ĐẠO (ORBIT LINE) ---
+        // ĐƯỜNG QUỸ ĐẠO (ORBIT LINE)
         const orbitRadius = 28;
         const orbitGeometry = new THREE.BufferGeometry();
         const orbitPoints = [];
@@ -172,7 +187,7 @@
         const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.5 });
         const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
 
-        // --- BỔ SUNG TRỤC TRÁI ĐẤT (AXIS LINE) ---
+        // TRỤC TRÁI ĐẤT (AXIS LINE)
         const axisGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, -5.5, 0),
             new THREE.Vector3(0, 5.5, 0)
@@ -180,20 +195,16 @@
         const axisMaterial = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 });
         const axisLine = new THREE.Line(axisGeometry, axisMaterial);
         
-        // Nhóm Trái Đất và Trục quay vào làm MỘT để cùng nghiêng 23.5 độ
         const earthGroup = new THREE.Group();
         earthGroup.add(earthMesh);
         earthGroup.add(axisLine);
         
-        // Đặt độ nghiêng trục chuẩn thiên văn (23.5 độ = ~0.41 radian)
         earthGroup.rotation.z = 0.41; 
 
-        // Tạo tâm quay quỹ đạo quanh Mặt Trời
         const earthPivot = new THREE.Object3D();
         scene.add(earthPivot);
         earthPivot.add(earthGroup);
         
-        // Đặt vị trí Trái Đất trên đường quỹ đạo
         earthGroup.position.set(orbitRadius, 0, 0);
 
         camera.lookAt(10, 0, 0);
@@ -202,19 +213,52 @@
         const orbitSpeedSlider = document.getElementById('orbitSpeedSlider');
         const localTimeSpan = document.getElementById('localTime');
 
+        // LOGIC PHÁT HIỆN CLICK CHỌN HÀNH TINH (RAYCASTER)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const infoPopup = document.getElementById('infoPopup');
+        const popupTitle = document.getElementById('popupTitle');
+        const popupDesc = document.getElementById('popupDesc');
+
+        window.addEventListener('click', (event) => {
+            // Loại trừ click trúng bảng điều khiển menu
+            if (event.target.closest('.ui-panel')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([sunMesh, earthMesh]);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+
+                if (clickedObject === sunMesh) {
+                    popupTitle.innerText = "MẶT TRỜI (THE SUN)";
+                    popupDesc.innerHTML = "• Thiên thể trung tâm của Hệ Mặt Trời.<br>• Nguồn cung cấp năng lượng ánh sáng và nhiệt lượng chính cho Trái Đất.";
+                    infoPopup.style.display = "block";
+                } else if (clickedObject === earthMesh) {
+                    popupTitle.innerText = "TRÁI ĐẤT (THE EARTH)";
+                    popupDesc.innerHTML = "• Hành tinh thứ 3 tính từ Mặt Trời.<br>• Có trục nghiêng cố định <span style='color:#ef4444;font-weight:bold;'>23.5°</span> tạo nên hiện tượng mùa.";
+                    infoPopup.style.display = "block";
+                }
+            } else {
+                infoPopup.style.display = "none";
+            }
+        });
+
         function animate() {
             requestAnimationFrame(animate);
 
+            controls.update(); // Cập nhật chuyển động xoay camera liên tục
+
             const now = new Date();
-            localTimeSpan.innerText = now.toLocaleTimeString('vi-VN');
+            if (localTimeSpan) localTimeSpan.innerText = now.toLocaleTimeString('vi-VN');
 
             const spinSpeed = parseFloat(spinSpeedSlider.value);
             const orbitSpeed = parseFloat(orbitSpeedSlider.value);
 
-            // Trái Đất tự xoay quanh trục nghiêng của nó
             earthMesh.rotation.y += spinSpeed;     
-            
-            // Cả hệ thống Trái Đất chuyển động tịnh tiến quanh Mặt Trời
             earthPivot.rotation.y += orbitSpeed;   
 
             renderer.render(scene, camera);
