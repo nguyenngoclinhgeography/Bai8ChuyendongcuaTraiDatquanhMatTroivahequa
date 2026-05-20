@@ -36,9 +36,37 @@
         .highlight-day { color: #fde047; font-weight: bold; }
         .highlight-night { color: #a78bfa; font-weight: bold; }
 
+        /* KHUNG NHÃN CHỮ HIỆN TẠI VỊ TRÍ CLICK TRÊN BỀ MẶT */
+        .marker-label {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+            border: 1px solid #38bdf8;
+            pointer-events: none; 
+            display: none; 
+            transform: translate(-50%, -130%); 
+            white-space: nowrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 50;
+        }
+        .marker-label::after {
+            content: '';
+            position: absolute;
+            bottom: -5px; left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: rgba(15, 23, 42, 0.95) transparent;
+            display: block; width: 0;
+        }
+
         /* Giao diện chuẩn trên Máy tính */
         @media (min-width: 769px) {
-            .ui-panel { top: 20px; right: 20px; width: 340px; } /* Đổi sang bên phải cho đỡ vướng Mặt Trời bên trái */
+            .ui-panel { top: 20px; right: 20px; width: 340px; }
         }
 
         /* Giao diện tối ưu trên Điện thoại */
@@ -64,7 +92,7 @@
         </div>
         
         <div class="slider-group">
-            <label for="dateSlider">Kéo thanh trượt để đổi mùa giải thích liên tục:</label>
+            <label for="dateSlider">Kéo thanh trượt đổi mùa (Click bất kỳ đâu trên Trái Đất để xác định phương hướng bán cầu):</label>
             <input type="range" id="dateSlider" min="0" max="180" step="1" value="0">
         </div>
 
@@ -74,9 +102,12 @@
         </div>
     </div>
 
+    <div id="markerLabel" class="marker-label">Tên vị trí</div>
+
     <canvas id="canvas3d"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         // 1. Khởi tạo môi trường 3D cơ bản
         const canvas = document.getElementById('canvas3d');
@@ -84,17 +115,36 @@
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
         
         if(window.innerWidth < 768) {
-            camera.position.set(0, 0, 38); // Góc nhìn điện thoại rộng hơn tí
+            camera.position.set(0, 5, 38); 
         } else {
-            camera.position.set(0, 0, 28); // Góc nhìn máy tính chính diện
+            camera.position.set(0, 0, 28); 
         }
 
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
+        // Kích hoạt bộ điều khiển xoay đa hướng tự do
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 80;
+        controls.minDistance = 15;
+
         // Ánh sáng không gian giúp nhìn thấy phần ban đêm nhưng vẫn tối mờ mờ
         scene.add(new THREE.AmbientLight(0x222233));
+
+        // Hệ thống vì sao lấp lánh làm nền vũ trụ
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 1000;
+        const starPositions = new Float32Array(starsCount * 3);
+        for(let i = 0; i < starsCount * 3; i++) {
+            starPositions[i] = (Math.random() - 0.5) * 300;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.8 });
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(starField);
 
         // 2. TẠO MẶT TRỜI TRỰC QUAN Ở BÊN TRÁI
         const sunCanvas = document.createElement('canvas');
@@ -110,43 +160,40 @@
             new THREE.SphereGeometry(4.5, 32, 32),
             new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sunCanvas) })
         );
-        sunMesh.position.set(-14, 0, 0); // Đặt cố định ở bìa trái màn hình
+        sunMesh.position.set(-14, 0, 0); 
         scene.add(sunMesh);
 
         // Ánh sáng phát ra từ vị trí Mặt Trời chiếu sang Trái Đất
         const sunLight = new THREE.DirectionalLight(0xffffff, 3.0);
-        sunLight.position.set(-1, 0, 0); // Chiếu từ trái qua phải
+        sunLight.position.set(-1, 0, 0); 
         scene.add(sunLight);
 
-        // 3. THIẾT LẬP TRÁI ĐẤT MÀU SẮC RÕ RÀNG (Sửa lỗi tối đen)
+        // 3. THIẾT LẬP TRÁI ĐẤT MÀU SẮC RÕ RÀNG
         const earthCanvas = document.createElement('canvas');
         earthCanvas.width = 1024; earthCanvas.height = 512;
         const earthCtx = earthCanvas.getContext('2d');
         
-        // Nền nước biển màu xanh tươi sáng hơn
         earthCtx.fillStyle = '#1d4ed8'; earthCtx.fillRect(0, 0, 1024, 512); 
         
-        // Vẽ bản đồ lục địa to, sáng để khi ánh sáng chiếu vào nhìn rõ mồn một
-        earthCtx.fillStyle = '#22c55e'; // Màu xanh lá cây của đất liền
+        earthCtx.fillStyle = '#22c55e'; 
         function drawBigLand(x, y, w, h) {
             earthCtx.beginPath();
             earthCtx.roundRect(x, y, w, h, 40);
             earthCtx.fill();
-            // Thêm chút đốm vàng sa mạc cho sinh động
             earthCtx.fillStyle = '#eab308';
             earthCtx.beginPath();
             earthCtx.arc(x + w/2, y + h/2, Math.min(w,h)/3, 0, Math.PI*2);
             earthCtx.fill();
-            earthCtx.fillStyle = '#22c55e'; // Trả lại màu xanh
+            earthCtx.fillStyle = '#22c55e'; 
         }
-        drawBigLand(100, 80, 250, 180);  // Khối lục địa 1
-        drawBigLand(180, 280, 180, 180); // Khối lục địa 2
-        drawBigLand(600, 100, 300, 200); // Khối lục địa 3
-        drawBigLand(700, 320, 150, 120); // Khối lục địa 4
+        drawBigLand(100, 80, 250, 180);  
+        drawBigLand(180, 280, 180, 180); 
+        drawBigLand(600, 100, 300, 200); 
+        drawBigLand(700, 320, 150, 120); 
 
         const earthTexture = new THREE.CanvasTexture(earthCanvas);
         const earthMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(5.2, 40, 40), // Thu nhỏ Trái Đất tí để nhường chỗ cho Mặt Trời
+            new THREE.SphereGeometry(5.2, 40, 40), 
             new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.5, metalness: 0.1 })
         );
 
@@ -166,14 +213,12 @@
             linesGroup.add(line);
         }
 
-        // Tạo 5 vĩ tuyến mốc dựa theo kích thước bán kính 5.2
-        addLatitude(0, 0xffffff);       // Xích đạo
-        addLatitude(2.06, 0xf59e0b);    // Chí tuyến Bắc
-        addLatitude(-2.06, 0xf59e0b);   // Chí tuyến Nam
-        addLatitude(4.44, 0x38bdf8);    // Vòng cực Bắc
-        addLatitude(-4.44, 0x38bdf8);   // Vòng cực Nam
+        addLatitude(0, 0xffffff);       
+        addLatitude(2.06, 0xf59e0b);    
+        addLatitude(-2.06, 0xf59e0b);   
+        addLatitude(4.44, 0x38bdf8);    
+        addLatitude(-4.44, 0x38bdf8);   
 
-        // Trục quay đỏ nghiêng cố định
         const axisGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -7.5, 0), new THREE.Vector3(0, 7.5, 0)]);
         const axisLine = new THREE.Line(axisGeom, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
         linesGroup.add(axisLine);
@@ -184,9 +229,9 @@
         earthSystem.add(linesGroup);
         earthSystem.rotation.z = 0.41; 
         scene.add(earthSystem);
-        earthSystem.position.set(4, 0, 0); // Đẩy qua phải để tạo khoảng cách với Mặt Trời
+        earthSystem.position.set(4, 0, 0); 
 
-        // 5. ĐƯỜNG PHÂN CHIA SÁNG TỐI (Terminator - Vòng tròn trắng nét đứt)
+        // 5. ĐƯỜNG PHÂN CHIA SÁNG TỐI (Terminator)
         const terminatorGeom = new THREE.BufferGeometry();
         const termPoints = [];
         for(let i=0; i<=64; i++) {
@@ -197,7 +242,7 @@
         const terminatorLine = new THREE.Line(terminatorGeom, new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.3, gapSize: 0.15 }));
         terminatorLine.computeLineDistances();
         scene.add(terminatorLine);
-        terminatorLine.position.copy(earthSystem.position); // Luôn đứng yên tại vị trí Trái Đất
+        terminatorLine.position.copy(earthSystem.position); 
 
         // 6. Logic điều khiển và bảng chữ phân tích Địa lí
         const slider = document.getElementById('dateSlider');
@@ -208,7 +253,6 @@
 
         function updatePhenomenon() {
             const val = parseInt(slider.value);
-            // Xoay hệ thống Trái Đất theo trục Y để thay đổi hướng ngả của trục so với Mặt Trời bên trái
             earthSystem.rotation.y = (val / 180) * Math.PI;
 
             if (val < 45) {
@@ -245,10 +289,85 @@
         slider.addEventListener('input', updatePhenomenon);
         updatePhenomenon(); 
 
-        // 7. Hoạt ảnh tự quay quanh trục nhẹ nhàng
+        // --- TÍNH NĂNG QUÉT VĨ ĐỘ KHI CLICK BẤT KỲ VỊ TRÍ NÀO TRÊN TRÁI ĐẤT ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const markerLabel = document.getElementById('markerLabel');
+        let clickedWorldPoint = null; 
+
+        window.addEventListener('click', (event) => {
+            // Né bảng menu UI điều khiển ra
+            if(event.target.closest('.ui-panel')) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            // Quét điểm chạm trên khối cầu Trái Đất
+            const intersects = raycaster.intersectObject(earthMesh);
+
+            if (intersects.length > 0) {
+                const intersectPoint = intersects[0].point;
+                clickedWorldPoint = intersectPoint.clone();
+
+                // Đổi tọa độ điểm chạm về hệ tọa độ cục bộ của Trái Đất để lấy giá trị Y chuẩn xác (không bị lệch do nghiêng trục)
+                const localPoint = earthMesh.worldToLocal(intersectPoint.clone());
+                const yCoord = localPoint.y; 
+
+                // Phân bổ vùng chữ hiển thị theo vĩ độ (Y chạy từ -5.2 đến 5.2)
+                if (yCoord > 0.8) {
+                    markerLabel.innerText = "BÁN CẦU BẮC";
+                    markerLabel.style.border = "1px solid #38bdf8"; 
+                } else if (yCoord < -0.8) {
+                    markerLabel.innerText = "BÁN CẦU NAM";
+                    markerLabel.style.border = "1px solid #f59e0b"; 
+                } else {
+                    markerLabel.innerText = "ĐƯỜNG XÍCH ĐẠO";
+                    markerLabel.style.border = "1px solid #ffffff"; 
+                }
+                
+                markerLabel.style.display = 'block';
+                updateLabelPosition();
+            } else {
+                clickedWorldPoint = null;
+                markerLabel.style.display = 'none';
+            }
+        });
+
+        // Hàm tính toán đẩy bảng chữ bám đuổi theo bề mặt Trái Đất khi xoay 3D
+        function updateLabelPosition() {
+            if (!clickedWorldPoint) return;
+
+            const targetPosition = clickedWorldPoint.clone();
+            
+            const meshPosition = new THREE.Vector3();
+            earthMesh.getWorldPosition(meshPosition);
+            
+            const cameraToMesh = new THREE.Vector3().subVectors(meshPosition, camera.position);
+            const cameraToPoint = new THREE.Vector3().subVectors(targetPosition, camera.position);
+
+            // Thuật toán kiểm tra mặt khuất: Nếu điểm click xoay ra mặt sau quả địa cầu thì ẩn chữ đi
+            if (cameraToPoint.length() > cameraToMesh.length() + 0.5) {
+                markerLabel.style.display = 'none';
+            } else {
+                targetPosition.project(camera);
+                const x = (targetPosition.x * .5 + .5) * window.innerWidth;
+                const y = (targetPosition.y * -.5 + .5) * window.innerHeight;
+
+                markerLabel.style.display = 'block';
+                markerLabel.style.left = `${x}px`;
+                markerLabel.style.top = `${y}px`;
+            }
+        }
+
+        // 7. Hoạt hoạt ảnh Render liên tục
         function animate() {
             requestAnimationFrame(animate);
-            earthMesh.rotation.y += 0.002; // Trái Đất tự quay liên tục để học sinh ngắm các mặt
+            
+            controls.update(); // Cập nhật góc xoay camera từ chuột học sinh
+            updateLabelPosition(); // Giữ bảng chữ luôn ghim chặt vào điểm chạm kể cả khi đang xoay
+
+            earthMesh.rotation.y += 0.002; 
             renderer.render(scene, camera);
         }
         animate();
