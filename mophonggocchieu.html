@@ -3,76 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mô phỏng Góc Chiếu Tia Sáng Mặt Trời</title>
+    <title>Mô phỏng Góc Chiếu Tia Sáng Mặt Trời Cao Cấp & Trắc Nghiệm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #03030c; color: #fff; font-family: sans-serif; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #020208; color: #fff; font-family: sans-serif; }
         #canvas3d { width: 100vw; height: 100vh; display: block; }
         
-        /* Khung điều khiển thông minh */
+        /* Khung điều khiển thông minh bên trái */
         .ui-panel { 
             position: absolute; 
-            background: rgba(5, 5, 15, 0.9); 
+            top: 20px; left: 20px; width: 340px;
+            max-height: 90vh; overflow-y: auto;
+            background: rgba(6, 10, 26, 0.95); 
             padding: 15px; 
             border-radius: 12px; 
-            box-shadow: 0 4px 25px rgba(0,0,0,0.7); 
-            border: 1px solid #334155; 
+            box-shadow: 0 4px 30px rgba(0,0,0,0.9); 
+            border: 1px solid #1e293b; 
             z-index: 10; 
         }
         
-        h1 { font-size: 1.15em; margin-top: 0; margin-bottom: 8px; color: #10b981; text-align: center; text-transform: uppercase; }
+        /* Khung trắc nghiệm địa lý bên phải - Hỗ trợ hiệu ứng thu gọn mượt mà */
+        .quiz-panel {
+            position: absolute;
+            top: 20px; right: 20px; width: 360px;
+            background: rgba(6, 10, 26, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.9);
+            border: 1px solid #1e293b;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            overflow: hidden;
+        }
+
+        /* Khi panel trắc nghiệm bị thu gọn */
+        .quiz-panel.collapsed {
+            width: 220px;
+            padding: 10px 15px;
+        }
+        
+        /* Tiêu đề trắc nghiệm có nút thu gọn/mở rộng */
+        .quiz-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            padding-bottom: 6px;
+        }
+        .quiz-panel.collapsed .quiz-header-container {
+            margin-bottom: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .toggle-quiz-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: 0.2s;
+            flex: none;
+            width: auto;
+        }
+        .toggle-quiz-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Khung chứa nội dung ẩn hiện khi thu gọn */
+        .quiz-body-wrapper {
+            transition: opacity 0.2s ease;
+            opacity: 1;
+        }
+        .quiz-panel.collapsed .quiz-body-wrapper {
+            display: none;
+            opacity: 0;
+        }
+        
+        h1 { font-size: 1.05em; margin: 0; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; }
         h2 { font-size: 0.95em; color: #f59e0b; margin: 5px 0; text-align: center; }
+        h3 { font-size: 0.9em; color: #38bdf8; margin: 5px 0; }
         
         .btn-group { display: flex; gap: 10px; margin-bottom: 12px; }
         button { flex: 1; padding: 8px; border: none; border-radius: 6px; background: #1e293b; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.85em; }
         button.active { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
         
-        .slider-group { margin-bottom: 12px; }
+        .slider-group { margin-bottom: 12px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid #1e293b; }
         label { display: block; margin-bottom: 4px; font-weight: bold; color: #38bdf8; font-size: 0.85em; }
-        input[type=range] { width: 100%; cursor: pointer; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #10b981; }
 
         .info-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.85em; line-height: 1.4; border-left: 4px solid #f59e0b; }
         .info-box strong { color: #f43f5e; }
 
+        /* Vùng nội dung Trắc nghiệm */
+        #quizMainMenu { text-align: center; padding: 15px 0; }
+        .start-quiz-btn { background: #f59e0b; color: #020208; width: 100%; padding: 12px; font-size: 1em; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .start-quiz-btn:hover { background: #d97706; transform: scale(1.02); }
+
+        #quizContent { min-height: 280px; } /* Cố định chiều cao tránh nhảy màn hình */
+        .question-text { font-size: 0.95em; margin: 10px 0; line-height: 1.4; font-weight: 500; height: 55px; overflow: hidden; }
+        .options-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        .option-btn { text-align: left; background: #1e293b; padding: 10px 12px; border-radius: 6px; font-size: 0.85em; font-weight: normal; border: 1px solid transparent; }
+        .option-btn:hover { background: #334155; }
+        .option-btn.correct { background: #065f46; border-color: #10b981; color: #34d399; font-weight: bold; }
+        .option-btn.wrong { background: #991b1b; border-color: #f43f5e; color: #fca5a5; }
+        
+        .quiz-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; padding-top: 10px; margin-top: 10px; }
+        .feedback-box { font-size: 0.82em; padding: 8px; border-radius: 6px; min-height: 35px; margin-bottom: 10px; line-height: 1.3; display: flex; align-items: center; }
+        
+        /* Giao diện chúc mừng hoàn thành */
+        #quizResultScreen { display: none; text-align: center; padding: 25px 10px; }
+        .congrats-title { color: #10b981; font-size: 1.25em; font-weight: bold; margin-bottom: 10px; }
+        
         /* KHUNG NHÃN CHỮ HIỆN TẠI VỊ TRÍ CLICK */
         .marker-label {
-            position: absolute;
-            background: rgba(15, 23, 42, 0.95);
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.85em;
-            font-weight: bold;
-            border: 1px solid #38bdf8;
-            pointer-events: none; 
-            display: none; 
-            transform: translate(-50%, -130%); 
-            white-space: nowrap;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            z-index: 50;
+            position: absolute; background: rgba(15, 23, 42, 0.95); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85em; font-weight: bold; border: 1px solid #38bdf8; pointer-events: none; display: none; transform: translate(-50%, -130%); white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.5); z-index: 50;
         }
         .marker-label::after {
-            content: '';
-            position: absolute;
-            bottom: -5px; left: 50%;
-            transform: translateX(-50%);
-            border-width: 5px 5px 0;
-            border-style: solid;
-            border-color: rgba(15, 23, 42, 0.95) transparent;
-            display: block; width: 0;
+            content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: rgba(15, 23, 42, 0.95) transparent; display: block; width: 0;
         }
 
-        /* Giao diện cho Máy tính */
-        @media (min-width: 769px) {
-            .ui-panel { top: 20px; left: 20px; width: 320px; }
+        /* Responsive di động */
+        @media (max-width: 1024px) {
+            .ui-panel { top: auto; bottom: 10px; left: 10px; width: calc(50% - 15px); max-height: 420px; }
+            .quiz-panel { top: auto; bottom: 10px; right: 10px; width: calc(50% - 15px); max-height: 420px; }
+            .quiz-panel.collapsed { width: calc(50% - 15px); }
         }
-
-        /* Giao diện đặc trị cho Điện thoại */
         @media (max-width: 768px) {
-            .ui-panel { bottom: 10px; left: 10px; right: 10px; padding: 10px; }
-            h1 { font-size: 1em; margin-bottom: 5px; }
-            .btn-group { margin-bottom: 8px; }
-            .slider-group { margin-bottom: 8px; }
-            .info-box { font-size: 0.75em; padding: 6px; }
+            body { overflow-y: auto; } #canvas3d { height: 45vh; }
+            .ui-panel, .quiz-panel { position: relative; top: 0; left: 0; right: 0; width: auto; max-height: none; margin: 10px; }
+            .quiz-panel.collapsed { width: auto; }
         }
     </style>
 </head>
@@ -82,314 +146,332 @@
         <h1>Góc chiếu tia sáng Mặt Trời</h1>
         
         <div class="btn-group">
-            <button id="btnJune" class="active" onclick="setSolstice('june')">Ngày 22 tháng 6</button>
-            <button id="btnDecember" onclick="setSolstice('december')">Ngày 22 tháng 12</button>
+            <button id="btnJune" class="active" onclick="setSolstice('june')">Ngày 22/6 (Hạ chí)</button>
+            <button id="btnDecember" onclick="setSolstice('december')">Ngày 22/12 (Đông chí)</button>
         </div>
         
         <div class="slider-group">
-            <label id="dateLabel" for="dateSlider">Kéo tự do (Xoay chuột để xem đa chiều. Click vào bất kỳ đâu trên Trái Đất để xem tên bề mặt):</label>
+            <label id="dateLabel" for="dateSlider">Thời gian trong năm (Tịnh tiến trục):</label>
             <input type="range" id="dateSlider" min="0" max="180" step="1" value="0">
         </div>
 
+        <div class="slider-group">
+            <label for="speedSlider">Tốc độ Trái Đất tự quay quanh trục:</label>
+            <input type="range" id="speedSlider" min="0" max="100" step="1" value="25">
+        </div>
+
         <h2 id="statusTitle">Ngày 22/6 (Hạ chí)</h2>
-        <div class="info-box" id="analysisText">
-            Đang tải dữ liệu địa lí...
+        <div class="info-box" id="analysisText">Đang tải dữ liệu địa lí...</div>
+    </div>
+
+    <div class="quiz-panel" id="quizPanel">
+        <div class="quiz-header-container">
+            <h1>Trắc nghiệm Địa lí</h1>
+            <button class="toggle-quiz-btn" id="toggleQuizBtn" onclick="toggleQuizPanel()" title="Thu gọn / Mở rộng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="quiz-body-wrapper">
+            <div id="quizMainMenu">
+                <p style="font-size: 0.88em; color: #94a3b8; margin-bottom: 15px; line-height: 1.4;">Bấm nút bên dưới để bắt đầu thử thách nhanh giải mã các quy luật góc chiếu Mặt Trời!</p>
+                <button class="start-quiz-btn" onclick="startQuiz()">
+                    <i class="fa-solid fa-lightbulb"></i> Bắt đầu Thử Thách
+                </button>
+            </div>
+
+            <div id="quizContent" style="display: none;">
+                <h3 id="questionNo">Câu hỏi 1/5</h3>
+                <div class="question-text" id="questionText">Đang tải câu hỏi...</div>
+                <div class="options-list" id="optionsContainer"></div>
+                <div class="feedback-box" id="feedbackBox"></div>
+                <div class="quiz-footer">
+                    <span id="scoreText" style="font-size: 0.85em; color: #a1a1aa;">Điểm: 0/0</span>
+                    <button id="nextQuestionBtn" style="flex: none; width: auto; padding: 6px 15px; background: #38bdf8; color: #020208;" onclick="nextQuestion()">Tiếp theo</button>
+                </div>
+            </div>
+
+            <div id="quizResultScreen">
+                <div style="font-size: 3em; color: #f59e0b; margin-bottom: 10px;"><i class="fa-solid fa-trophy"></i></div>
+                <div class="congrats-title">Chúc mừng bạn đã hoàn thành bài tập!</div>
+                <p id="finalScoreText" style="font-size: 0.95em; color: #e4e4e7; margin-bottom: 20px;">Bạn đạt được 5/5 câu hỏi đúng.</p>
+                <button class="start-quiz-btn" style="background: #10b981;" onclick="resetQuiz()">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> Bấm Làm Lại
+                </button>
+            </div>
         </div>
     </div>
 
     <div id="markerLabel" class="marker-label">Tên vị trí</div>
-
     <canvas id="canvas3d"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
-        // 1. Thiết lập không gian 3D
+        // Logic Thu gọn / Mở rộng bảng trắc nghiệm
+        function toggleQuizPanel() {
+            const panel = document.getElementById('quizPanel');
+            const btn = document.getElementById('toggleQuizBtn');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                btn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            } else {
+                panel.classList.add('collapsed');
+                btn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+            }
+        }
+
+        // 1. Hệ thống âm thanh tự động tạo bằng Code (Không lo lỗi tải file)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'correct') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            }
+        }
+
+        // 2. Thiết lập không gian 3D
         const canvas = document.getElementById('canvas3d');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        if(window.innerWidth < 768) {
-            camera.position.set(0, 5, 45);
-        } else {
-            camera.position.set(0, 0, 35);
-        }
+        camera.position.set(window.innerWidth < 768 ? 0 : -2, window.innerWidth < 768 ? 10 : 0, window.innerWidth < 768 ? 42 : 30);
 
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        // Kích hoạt tính năng xoay camera tự do
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; 
-        controls.dampingFactor = 0.05;
-        controls.maxDistance = 100;    
-        controls.minDistance = 15;     
+        controls.enableDamping = true; controls.dampingFactor = 0.05; controls.maxDistance = 80; controls.minDistance = 12;
+        scene.add(new THREE.AmbientLight(0x0a0a12));
 
-        scene.add(new THREE.AmbientLight(0x222233));
+        // Vũ trưng sao nền phát sáng
+        const starsGeometry = new THREE.BufferGeometry(); const starsCount = 3000; const starPos = new Float32Array(starsCount * 3);
+        for(let i=0; i<starsCount*3; i++) { starPos[i] = (Math.random() - 0.5) * 500; }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        scene.add(new THREE.Points(starsGeometry, new THREE.PointsMaterial({ size: 0.4, color: 0xffffff, transparent: true, opacity: 0.8 })));
 
-        // Hệ thống vì sao vũ trụ lấp lánh
-        const starsGeometry = new THREE.BufferGeometry();
-        const starsCount = 1200; 
-        const starPositions = new Float32Array(starsCount * 3);
-        for(let i = 0; i < starsCount * 3; i++) {
-            starPositions[i] = (Math.random() - 0.5) * 300;
-        }
-        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0.9 });
-        const starField = new THREE.Points(starsGeometry, starsMaterial);
-        scene.add(starField);
-
-        // 2. Hệ thống tia sáng song song
-        const rayGroup = new THREE.Group();
-        scene.add(rayGroup);
-
+        // Hệ thống tia sáng song song
+        const rayGroup = new THREE.Group(); scene.add(rayGroup);
         function createSunRays() {
             while(rayGroup.children.length > 0){ rayGroup.remove(rayGroup.children[0]); }
-            const rayColor = 0xef4444; 
-            const arrowLength = 6; 
-            const headLength = 0.8;
-            const headWidth = 0.4;
-
-            for (let y = -6; y <= 6; y += 2) {
-                const origin = new THREE.Vector3(-12, y, 0); 
-                const dir = new THREE.Vector3(1, 0, 0).normalize();
-                const arrowHelper = new THREE.ArrowHelper(dir, origin, arrowLength, rayColor, headLength, headWidth);
-                rayGroup.add(arrowHelper);
+            for (let y = -6; y <= 6; y += 1.5) {
+                for (let z = -4; z <= 4; z += 2) {
+                    if (Math.abs(y) + Math.abs(z) > 8) continue;
+                    rayGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0).normalize(), new THREE.Vector3(-14, y, z), 7, 0xf97316, 0.8, 0.4));
+                }
             }
         }
         createSunRays();
 
-        // --- NÂNG CẤP DÒNG CHỮ TIA SÁNG MẶT TRỜI THÀNH VẬT THỂ 3D ĐI THEO MŨI TÊN ---
-        const textCanvas = document.createElement('canvas');
-        textCanvas.width = 512; textCanvas.height = 128;
-        const textCtx = textCanvas.getContext('2d');
-        textCtx.clearRect(0, 0, 512, 128);
-        textCtx.fillStyle = '#ef4444';
-        textCtx.font = 'Bold 42px sans-serif';
-        textCtx.textAlign = 'center';
-        textCtx.textBaseline = 'middle';
-        // Thêm hiệu ứng phát sáng nhẹ cho chữ 3D chuẩn trực quan
-        textCtx.shadowColor = 'rgba(239, 68, 68, 0.6)';
-        textCtx.shadowBlur = 8;
-        textCtx.fillText('TIA SÁNG MẶT TRỜI', 256, 64);
+        // Chữ 3D Tia sáng
+        const textCanvas = document.createElement('canvas'); textCanvas.width = 512; textCanvas.height = 128;
+        const textCtx = textCanvas.getContext('2d'); textCtx.fillStyle = '#f97316'; textCtx.font = 'Bold 36px sans-serif'; textCtx.textAlign = 'center'; textCtx.fillText('TIA SÁNG MẶT TRỜI', 256, 64);
+        const sunRayText3D = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(textCanvas), transparent: true, side: THREE.DoubleSide }));
+        sunRayText3D.position.set(-10, 7.5, 0); scene.add(sunRayText3D);
 
-        const textTexture = new THREE.CanvasTexture(textCanvas);
-        const textMaterial = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true, side: THREE.DoubleSide });
-        const textPlaneGeometry = new THREE.PlaneGeometry(10, 2.5);
-        const sunRayText3D = new THREE.Mesh(textPlaneGeometry, textMaterial);
-        // Đặt vị trí tấm chữ nằm ngay trước hệ thống mũi tên
-        sunRayText3D.position.set(-9, 7.5, 0);
-        scene.add(sunRayText3D);
+        // Bản đồ kết cấu địa hình bề mặt quả cầu 
 
-        // 3. Tạo địa hình Trái Đất
-        const earthCanvas = document.createElement('canvas');
-        earthCanvas.width = 512; earthCanvas.height = 256;
-        const earthCtx = earthCanvas.getContext('2d');
-        
-        earthCtx.fillStyle = '#1e3a8a'; earthCtx.fillRect(0, 0, 512, 256);
-        earthCtx.fillStyle = '#15803d';
-        function drawMapBlock(x, y, w, h) {
-            earthCtx.beginPath(); earthCtx.roundRect(x, y, w, h, 20); earthCtx.fill();
+        const earthRadius = 5.5; const earthCanvas = document.createElement('canvas'); earthCanvas.width = 1024; earthCanvas.height = 512; const ctx = earthCanvas.getContext('2d');
+        const oceanGradient = ctx.createRadialGradient(512, 256, 10, 512, 256, 512); oceanGradient.addColorStop(0, '#1d4ed8'); oceanGradient.addColorStop(0.5, '#1e3a8a'); oceanGradient.addColorStop(1, '#0f172a');
+        ctx.fillStyle = oceanGradient; ctx.fillRect(0, 0, 1024, 512);
+
+        const geographicalFeatures = [
+            { name: "Antarctica", points: [[0, 460], [150, 455], [300, 450], [450, 458], [600, 452], [750, 450], [900, 455], [1024, 460], [1024, 512], [0, 512]], type: "ice" },
+            { name: "Greenland", points: [[360, 45], [405, 35], [415, 70], [385, 95], [360, 75]], type: "ice" },
+            { name: "North America", points: [[130, 110], [150, 80], [200, 55], [260, 50], [285, 45], [315, 65], [345, 55], [380, 85], [375, 110], [335, 125], [325, 145], [335, 175], [345, 205], [315, 235], [310, 255], [285, 245], [275, 275], [255, 285], [245, 275], [235, 235], [195, 215], [145, 175], [125, 135]], type: "land" },
+            { name: "South America", points: [[255, 285], [280, 275], [305, 280], [330, 305], [355, 330], [375, 350], [345, 400], [315, 450], [295, 485], [285, 485], [285, 440], [265, 400], [250, 350], [245, 310]], type: "land" },
+            { name: "Africa", points: [[435, 230], [495, 220], [555, 235], [570, 250], [600, 290], [595, 330], [570, 410], [555, 440], [540, 410], [500, 340], [465, 320], [425, 290], [420, 255]], type: "land" },
+            { name: "Eurasia", points: [[405, 185], [425, 145], [450, 115], [495, 105], [510, 65], [540, 65], [560, 100], [590, 80], [640, 60], [740, 60], [840, 60], [910, 80], [930, 120], [890, 160], [850, 160], [830, 200], [840, 230], [800, 250], [780, 275], [775, 310], [760, 295], [750, 285], [735, 275], [720, 315], [690, 280], [660, 285], [660, 260], [600, 240], [580, 220], [545, 220], [500, 215], [465, 230], [435, 220], [405, 210]], type: "land" },
+            { name: "Vietnam", points: [[767, 275], [772, 277], [775, 282], [774, 286], [771, 289], [773, 293], [775, 297], [774, 301], [771, 303], [767, 303], [766, 299], [768, 295], [770, 291], [767, 284]], type: "vietnam" },
+            { name: "Australia", points: [[765, 380], [805, 360], [845, 375], [865, 410], [845, 440], [785, 435], [765, 410]], type: "land" }
+        ];
+
+        function drawGeoPolygon(points, type) {
+            ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) { ctx.lineTo(points[i][0], points[i][1]); } ctx.closePath();
+            if (type === 'land' || type === 'vietnam') { ctx.strokeStyle = 'rgba(20, 184, 166, 0.4)'; ctx.lineWidth = 6; ctx.stroke(); }
+            ctx.fillStyle = (type === 'ice') ? '#f1f5f9' : (type === 'vietnam' ? '#10b981' : '#15803d'); ctx.fill();
         }
-        drawMapBlock(50, 40, 120, 80);  
-        drawMapBlock(80, 130, 80, 90);  
-        drawMapBlock(280, 50, 160, 70); 
-        drawMapBlock(360, 140, 70, 50); 
+        geographicalFeatures.forEach(f => drawGeoPolygon(f.points, f.type));
+        ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(788, 274, 3, 0, Math.PI * 2); ctx.arc(794, 310, 3, 0, Math.PI * 2); ctx.fill(); // HS-TS
 
-        const earthTexture = new THREE.CanvasTexture(earthCanvas);
-        const earthMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(6, 40, 40),
-            new THREE.MeshStandardMaterial({ 
-                map: earthTexture, 
-                roughness: 0.2, 
-                metalness: 0.4  
-            })
-        );
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; ctx.lineWidth = 1; ctx.setLineDash([4, 8]);
+        for (let y = 0; y < 512; y += 85) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke(); }
+        ctx.setLineDash([]); ctx.strokeStyle = 'rgba(34, 211, 238, 0.25)'; ctx.beginPath(); ctx.moveTo(0, 256); ctx.lineTo(1024, 256); ctx.stroke();
 
-        // 4. Các đường vĩ tuyến chính
+        const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(earthRadius, 64, 64), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(earthCanvas), roughness: 0.6, metalness: 0.1 }));
         const linesGroup = new THREE.Group();
-        
-        function createLatitudeLine(y, color) {
-            const radius = Math.sqrt(6*6 - y*y); 
-            const points = [];
-            for (let i = 0; i <= 64; i++) {
-                const theta = (i / 64) * Math.PI * 2;
-                points.push(new THREE.Vector3(Math.cos(theta) * radius, y, Math.sin(theta) * radius));
-            }
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.7 });
-            const line = new THREE.Line(geometry, material);
-            linesGroup.add(line);
+        function createLatitudeLine(lat, col, dash=false) {
+            const rad = (lat * Math.PI) / 180; const y = earthRadius * Math.sin(rad); const r = earthRadius * Math.cos(rad); const pts = [];
+            for (let i = 0; i <= 64; i++) { const t = (i / 64) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(t) * r, y, Math.sin(t) * r)); }
+            const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), dash ? new THREE.LineDashedMaterial({ color: col, dashSize: 0.4, gapSize: 0.2 }) : new THREE.LineBasicMaterial({ color: col }));
+            if (dash) line.computeLineDistances(); linesGroup.add(line);
         }
+        createLatitudeLine(0, 0xffffff); createLatitudeLine(23.5, 0xf59e0b); createLatitudeLine(-23.5, 0xf59e0b);
+        linesGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -earthRadius*1.3, 0), new THREE.Vector3(0, earthRadius*1.3, 0)]), new THREE.LineBasicMaterial({ color: 0xef4444 })));
+        
+        const earthSystem = new THREE.Group(); earthSystem.add(earthMesh); earthSystem.add(linesGroup); scene.add(earthSystem); earthSystem.position.set(2, 0, 0);
+        const sunLight = new THREE.SpotLight(0xffffff, 8, 100, Math.PI/4, 0.4, 1); sunLight.position.set(-25, 0, 5); sunLight.target = earthMesh; scene.add(sunLight);
 
-        createLatitudeLine(0, 0xffffff);      
-        createLatitudeLine(2.38, 0xf59e0b);   
-        createLatitudeLine(-2.38, 0xf59e0b);  
-        createLatitudeLine(5.12, 0x38bdf8);   
-        createLatitudeLine(-5.12, 0x38bdf8);  
 
-        const axisGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, -9, 0), new THREE.Vector3(0, 9, 0)
-        ]);
-        const axisLine = new THREE.Line(axisGeometry, new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 }));
-        linesGroup.add(axisLine);
-
-        // Đóng gói hệ thống Trái Đất (Trái Đất + Vĩ tuyến)
-        const earthSystem = new THREE.Group();
-        earthSystem.add(earthMesh);
-        earthSystem.add(linesGroup);
-
-        earthSystem.rotation.z = 0.41; // Nghiêng trục 23.5 độ
-        scene.add(earthSystem);
-        earthSystem.position.set(4, 0, 0);
-
-        // Ánh sáng tập trung Spotlight ranh giới ngày đêm rõ nét
-        const sunLight = new THREE.SpotLight(0xffffff, 8); 
-        sunLight.position.set(-20, 0, 10); 
-        sunLight.target = earthMesh; 
-        sunLight.angle = Math.PI / 8; 
-        sunLight.penumbra = 0.5; 
-        sunLight.decay = 2; 
-        scene.add(sunLight);
-
-        // 5. Xử lý logic tương tác ngày tháng
-        const slider = document.getElementById('dateSlider');
-        const statusTitle = document.getElementById('statusTitle');
-        const analysisText = document.getElementById('analysisText');
-        const btnJune = document.getElementById('btnJune');
-        const btnDecember = document.getElementById('btnDecember');
+        // 3. Xử lý logic thay đổi góc chiếu địa lý
+        const slider = document.getElementById('dateSlider'); const speedSlider = document.getElementById('speedSlider');
+        const statusTitle = document.getElementById('statusTitle'); const analysisText = document.getElementById('analysisText');
 
         function updateSimulation() {
-            const val = parseInt(slider.value);
-            earthSystem.rotation.y = (val / 180) * Math.PI;
-
+            const val = parseInt(slider.value); earthSystem.rotation.z = (23.5 * (Math.PI / 180)) * Math.cos((val / 180) * Math.PI);
             if (val < 45) {
                 statusTitle.innerText = "Ngày 22 tháng 6 (Hạ chí)";
-                analysisText.innerHTML = "• <strong>Bán cầu Bắc</strong> đang ngả về phía Mặt Trời, có góc chiếu của tia sáng lớn, nhận được nhiều ánh sáng và nhiệt -> <strong>Mùa nóng</strong>.<br>• <strong>Bán cầu Nam</strong> chếch xa Mặt Trời, góc chiếu nhỏ, nhận ít nhiệt -> <strong>Mùa lạnh</strong>.";
-                setActiveButton('june');
+                analysisText.innerHTML = "• <strong>Bán cầu Bắc</strong> ngả nhiều nhất về phía Mặt Trời. Góc chiếu lúc giữa trưa tại Chí tuyến Bắc đạt <strong style='color:#10b981'>90°</strong> -> Bán cầu Bắc là mùa nóng.<br>• <strong>Bán cầu Nam</strong> chếch xa Mặt Trời -> Góc chiếu nhỏ, mùa lạnh.";
+                document.getElementById('btnJune').classList.add('active'); document.getElementById('btnDecember').classList.remove('active');
             } else if (val > 135) {
                 statusTitle.innerText = "Ngày 22 tháng 12 (Đông chí)";
-                analysisText.innerHTML = "• <strong>Bán cầu Nam</strong> đang ngả về phía Mặt Trời, góc chiếu tia sáng lớn, nhận được nhiều ánh sáng và nhiệt -> <strong>Mùa nóng</strong>.<br>• <strong>Bán cầu Bắc</strong> chếch xa Mặt Trời, góc chiếu rất nhỏ -> <strong>Mùa lạnh</strong>.";
-                setActiveButton('december');
+                analysisText.innerHTML = "• <strong>Bán cầu Nam</strong> ngả nhiều nhất về phía Mặt Trời. Góc chiếu lúc giữa trưa tại Chí tuyến Nam đạt <strong style='color:#10b981'>90°</strong> -> Bán cầu Nam là mùa nóng.<br>• <strong>Bán cầu Bắc</strong> chếch xa Mặt Trời -> Góc chiếu nhỏ, mùa lạnh.";
+                document.getElementById('btnJune').classList.remove('active'); document.getElementById('btnDecember').classList.add('active');
             } else {
-                statusTitle.innerText = "Giai đoạn chuyển tiếp (Xuân phân / Thu phân)";
-                analysisText.innerHTML = "Ánh sáng Mặt Trời đang phân bố đều về cả hai bán cầu. Góc chiếu tại Xích đạo đạt mức cao nhất (90 độ vào các ngày phân), hai bán cầu nhận lượng nhiệt và ánh sáng tương đương nhau.";
-                clearActiveButtons();
+                statusTitle.innerText = "Xuân phân (21/3) / Thu phân (23/9)";
+                analysisText.innerHTML = "Trục Trái Đất không ngả bán cầu nào về phía Mặt Trời. Ánh sáng Mặt Trời chiếu vuông góc <strong style='color:#38bdf8'>90° ngay tại Xích đạo (0°)</strong>. Lượng nhiệt và thời gian chiếu sáng ở hai bán cầu bằng nhau.";
+                document.getElementById('btnJune').classList.remove('active'); document.getElementById('btnDecember').classList.remove('active');
+            }
+        }
+        function setSolstice(type) { slider.value = (type === 'june') ? 0 : 180; updateSimulation(); }
+        slider.addEventListener('input', updateSimulation); updateSimulation();
+
+        // 4. HỆ THỐNG ĐIỀU KHIỂN LOGIC TRẮC NGHIỆM ĐỊA LÝ KHÔNG NHẢY KHUNG
+        const quizData = [
+            { question: "Vào ngày Hạ chí (22/6), tia sáng Mặt Trời chiếu vuông góc lúc giữa trưa tại vĩ tuyến nào?", options: ["Đường Xích đạo (0°)", "Chí tuyến Bắc (23°27'B)", "Chí tuyến Nam (23°27'N)", "Vòng cực Bắc (66°33'B)"], correct: 1, hint: "Hãy xem vĩ tuyến màu vàng phía trên trục nghiêng ngả về Mặt Trời." },
+            { question: "Tại sao cùng một thời điểm, bán cầu Bắc là mùa nóng thì bán cầu Nam lại là mùa lạnh?", options: ["Do khoảng cách Trái Đất tới Mặt Trời thay đổi", "Do Trái Đất tự quay quanh trục", "Do trục Trái Đất nghiêng và không đổi hướng khi chuyển động", "Do Mặt Trời di chuyển"], correct: 2, hint: "Trục Trái Đất nghiêng làm các bán cầu luân phiên ngả/chếch xa Mặt Trời." },
+            { question: "Trong các ngày Xuân phân và Thu phân, điểm nào trên Trái Đất có góc chiếu Mặt Trời lúc giữa trưa đạt 90°?", options: ["Chí tuyến Bắc", "Chí tuyến Nam", "Đường Xích đạo", "Cực Bắc"], correct: 2, hint: "Kéo thanh trượt về giữa để xem tia sáng vuông góc ở trung tâm quả cầu." },
+            { question: "Vào ngày Đông chí (22/12), ở bán cầu Bắc có hiện tượng thời tiết và góc chiếu thế nào?", options: ["Góc chiếu lớn, ngày dài hơn đêm", "Góc chiếu nhỏ, mùa nóng", "Góc chiếu lớn, mùa lạnh", "Góc chiếu nhỏ, ngày ngắn hơn đêm (mùa lạnh)"], correct: 3, hint: "Ngày 22/12 Bán cầu Bắc chếch xa Mặt Trời, nhận lượng nhiệt rất ít." },
+            { question: "Khu vực nào trên Trái Đất quanh năm có góc chiếu Mặt Trời lớn và thời gian chiếu sáng ổn định?", options: ["Khu vực Nội chí tuyến", "Khu vực Ôn đới", "Khu vực Cận cực", "Vùng cực Nam"], correct: 0, hint: "Khu vực nằm giữa hai chí tuyến luôn có Mặt Trời lên thiên đỉnh 2 lần/năm." }
+        ];
+
+        let currentQuestionIndex = 0; let score = 0; let totalAnswered = 0;
+
+        function startQuiz() {
+            document.getElementById('quizMainMenu').style.display = 'none';
+            document.getElementById('quizResultScreen').style.display = 'none';
+            document.getElementById('quizContent').style.display = 'block';
+            currentQuestionIndex = 0; score = 0; totalAnswered = 0;
+            document.getElementById('scoreText').innerText = `Điểm: 0/0`;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const currentQuiz = quizData[currentQuestionIndex];
+            document.getElementById('questionNo').innerText = `Câu hỏi ${currentQuestionIndex + 1}/${quizData.length}`;
+            document.getElementById('questionText').innerText = currentQuiz.question;
+            
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            
+            const feedback = document.getElementById('feedbackBox');
+            feedback.style.display = 'flex';
+            feedback.style.backgroundColor = 'rgba(255,255,255,0.02)';
+            feedback.style.border = '1px dashed #334155';
+            feedback.innerHTML = `<span style="color:#94a3b8;"><i class="fa-solid fa-circle-question"></i> Hãy chọn một phương án phía trên...</span>`;
+
+            currentQuiz.options.forEach((option, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = `${String.fromCharCode(65 + idx)}. ${option}`;
+                btn.onclick = () => checkAnswer(idx, btn);
+                container.appendChild(btn);
+            });
+            document.getElementById('nextQuestionBtn').disabled = true;
+        }
+
+        function checkAnswer(selectedIdx, clickedBtn) {
+            const currentQuiz = quizData[currentQuestionIndex];
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+            totalAnswered++;
+
+            const feedback = document.getElementById('feedbackBox');
+            feedback.style.border = '1px solid transparent';
+
+            if (selectedIdx === currentQuiz.correct) {
+                clickedBtn.classList.add('correct');
+                score++; playSound('correct');
+                feedback.style.backgroundColor = 'rgba(6, 95, 70, 0.4)';
+                feedback.innerHTML = `<span style="color:#34d399; font-weight:bold;"><i class="fa-solid fa-square-check"></i> Chính xác!</span>`;
+            } else {
+                clickedBtn.classList.add('wrong');
+                buttons[currentQuiz.correct].classList.add('correct'); playSound('wrong');
+                feedback.style.backgroundColor = 'rgba(153, 27, 27, 0.4)';
+                feedback.innerHTML = `<span style="color:#fca5a5; font-weight:bold; margin-right:5px;"><i class="fa-solid fa-triangle-exclamation"></i> Gợi ý:</span> <span style="color:#e4e4e7">${currentQuiz.hint}</span>`;
+            }
+            document.getElementById('scoreText').innerText = `Điểm: ${score}/${totalAnswered}`;
+            document.getElementById('nextQuestionBtn').disabled = false;
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                document.getElementById('quizContent').style.display = 'none';
+                document.getElementById('quizResultScreen').style.display = 'block';
+                document.getElementById('finalScoreText').innerText = `Bạn đã hoàn thành xuất sắc thử thách với số điểm ${score}/${quizData.length} câu đúng.`;
             }
         }
 
-        function setSolstice(type) {
-            if (type === 'june') { slider.value = 0; } 
-            else { slider.value = 180; }
-            updateSimulation();
+        function resetQuiz() {
+            startQuiz();
         }
 
-        function setActiveButton(type) {
-            if (type === 'june') {
-                btnJune.classList.add('active'); btnDecember.classList.remove('active');
-            } else {
-                btnDecember.classList.add('active'); btnJune.classList.remove('active');
-            }
-        }
+        // 5. Đo vĩ độ khi Click chuột lên mô hình cầu
+        const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        const markerLabel = document.getElementById('markerLabel'); let clickedWorldPoint = null;
 
-        function clearActiveButtons() {
-            btnJune.classList.remove('active'); btnDecember.classList.remove('active');
-        }
-
-        slider.addEventListener('input', updateSimulation);
-        updateSimulation();
-
-        // --- NÂNG CẤP: CLICK VÀO BẤT KỲ ĐÂU TRÊN TRÁI ĐẤT ĐỂ ĐỊNH VỊ VĨ ĐỘ ---
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        const markerLabel = document.getElementById('markerLabel');
-        let clickedWorldPoint = null; // Lưu trữ điểm vừa click trong không gian 3D
-
-        window.addEventListener('click', (event) => {
-            if(event.target.closest('.ui-panel')) return;
-
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
+        window.addEventListener('click', (e) => {
+            if(e.target.closest('.ui-panel') || e.target.closest('.quiz-panel')) return;
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-            // Bắn tia quét trúng toàn bộ quả cầu EarthMesh
             const intersects = raycaster.intersectObject(earthMesh);
-
             if (intersects.length > 0) {
-                const intersectPoint = intersects[0].point; // Tọa độ thực tế điểm click trong không gian
-                clickedWorldPoint = intersectPoint.clone();
-
-                // Chuyển đổi điểm chạm toàn cục về hệ tọa độ riêng của earthMesh để không bị ảnh hưởng khi xoay/nghiêng trục
-                const localPoint = earthMesh.worldToLocal(intersectPoint.clone());
-                const yCoord = localPoint.y; // Trục Y cục bộ đại diện cho Vĩ độ từ cực Nam đến cực Bắc
-
-                // Thuật toán phân vùng vĩ độ thông minh
-                if (yCoord > 1.0) {
-                    markerLabel.innerText = "BÁN CẦU BẮC";
-                    markerLabel.style.border = "1px solid #38bdf8"; // Viền xanh lam
-                } else if (yCoord < -1.0) {
-                    markerLabel.innerText = "BÁN CẦU NAM";
-                    markerLabel.style.border = "1px solid #f59e0b"; // Viền vàng cam
-                } else {
-                    markerLabel.innerText = "ĐƯỜNG XÍCH ĐẠO";
-                    markerLabel.style.border = "1px solid #ffffff"; // Viền trắng
-                }
-                
-                markerLabel.style.display = 'block';
-                updateLabelPosition();
-            } else {
-                clickedWorldPoint = null;
-                markerLabel.style.display = 'none';
-            }
+                clickedWorldPoint = intersects[0].point.clone();
+                let latDeg = Math.round(Math.asin(earthMesh.worldToLocal(intersects[0].point.clone()).y / earthRadius) * (180 / Math.PI) * 10) / 10;
+                if (Object.is(latDeg, -0)) latDeg = 0;
+                if (Math.abs(latDeg) <= 1.5) markerLabel.innerHTML = `ĐƯỜNG XÍCH ĐẠO (0°)`;
+                else if (latDeg > 0) markerLabel.innerHTML = `VĨ ĐỘ BẮC: ${latDeg}° N`;
+                else markerLabel.innerHTML = `VĨ ĐỘ NAM: ${Math.abs(latDeg)}° S`;
+                markerLabel.style.display = 'block'; updateLabelPosition();
+            } else { clickedWorldPoint = null; markerLabel.style.display = 'none'; }
         });
 
-        // Hàm ghim nhãn HTML chạy đuổi theo điểm vừa click trên bề mặt hành tinh
         function updateLabelPosition() {
-            if (!clickedWorldPoint) return;
-
-            const targetPosition = clickedWorldPoint.clone();
-            
-            // Kiểm tra xem mặt được click có bị xoay ra sau lưng camera không
-            const meshPosition = new THREE.Vector3();
-            earthMesh.getWorldPosition(meshPosition);
-            
-            const cameraToMesh = new THREE.Vector3().subVectors(meshPosition, camera.position);
-            const cameraToPoint = new THREE.Vector3().subVectors(targetPosition, camera.position);
-
-            // Nếu khoảng cách đến điểm chạm xa hơn khoảng cách đến tâm quả cầu -> nó đang ở mặt sau
-            if (cameraToPoint.length() > cameraToMesh.length() + 0.5) {
-                markerLabel.style.display = 'none';
-            } else {
-                targetPosition.project(camera);
-                const x = (targetPosition.x * .5 + .5) * window.innerWidth;
-                const y = (targetPosition.y * -.5 + .5) * window.innerHeight;
-
-                markerLabel.style.display = 'block';
-                markerLabel.style.left = `${x}px`;
-                markerLabel.style.top = `${y}px`;
+            if (!clickedWorldPoint) return; const p = clickedWorldPoint.clone(); const meshP = new THREE.Vector3(); earthMesh.getWorldPosition(meshP);
+            if (p.distanceTo(camera.position) > meshP.distanceTo(camera.position) + 0.2) { markerLabel.style.display = 'none'; } 
+            else {
+                p.project(camera); markerLabel.style.left = `${(p.x * .5 + .5) * window.innerWidth}px`; markerLabel.style.top = `${(p.y * -.5 + .5) * window.innerHeight}px`; markerLabel.style.display = 'block';
             }
         }
 
-        // 6. Vòng lặp Render liên tục
+        // 6. Vòng lặp hoạt ảnh mượt mà
         function animate() {
-            requestAnimationFrame(animate);
-            
-            controls.update(); 
-            
-            // Bắt dòng chữ TIA SÁNG MẶT TRỜI luôn luôn quay mặt về phía ống kính camera (Billboard effect)
-            sunRayText3D.quaternion.copy(camera.quaternion);
-            
-            updateLabelPosition(); // Cập nhật nhãn chữ động chạy theo điểm chạm khi học sinh kéo xoay chuột
-
-            earthMesh.rotation.y += 0.002; 
+            requestAnimationFrame(animate); controls.update();
+            sunRayText3D.quaternion.copy(camera.quaternion); updateLabelPosition();
+            earthMesh.rotation.y += parseInt(speedSlider.value) * 0.00015;
             renderer.render(scene, camera);
         }
         animate();
 
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
