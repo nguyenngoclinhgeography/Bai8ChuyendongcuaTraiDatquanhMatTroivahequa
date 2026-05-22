@@ -4,41 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mô phỏng 3D Trái Đất - Mặt Trời (Bản Có Trục Nghiêng & Quỹ Đạo)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #020208; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #canvas3d { width: 100vw; height: 100vh; display: block; }
         
-        /* BẢN NÂNG CẤP: TỰ ĐỘNG DI CHUYỂN THEO THIẾT BỊ */
+        /* PANEL ĐIỀU KHIỂN CHÍNH */
         .ui-panel { 
             position: absolute; 
-            background: rgba(5, 5, 10, 0.85); 
+            background: rgba(5, 5, 10, 0.9); 
             padding: 15px 20px; 
             border-radius: 12px; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.6); 
-            border: 1px solid #222; 
+            border: 1px solid #334155; 
             z-index: 10; 
         }
         
-        h1 { font-size: 1.2em; margin-top: 0; margin-bottom: 10px; color: #f39c12; text-align: center; }
-        p { font-size: 0.85em; color: #94a3b8; line-height: 1.4; margin-bottom: 10px; }
-        .controls { display: flex; flex-direction: column; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #38bdf8; font-size: 0.85em; }
-        input[type=range] { width: 100%; cursor: pointer; margin-bottom: 10px; }
+        h1 { font-size: 1.15em; margin-top: 0; margin-bottom: 10px; color: #f39c12; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+        p.tip { font-size: 0.8em; color: #94a3b8; line-height: 1.4; margin-bottom: 12px; border-bottom: 1px dashed #334155; padding-bottom: 8px; }
+        .controls { display: flex; flex-direction: column; gap: 8px; }
+        label { display: block; font-weight: bold; color: #38bdf8; font-size: 0.8em; }
+        input[type=range] { width: 100%; cursor: pointer; margin-bottom: 5px; }
+
+        /* NÚT BẬT TẮT XOAY TỰ ĐỘNG KHÔNG GIAN */
+        .btn-toggle {
+            background: #2563eb; color: white; border: none; padding: 8px 12px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85em;
+            transition: all 0.2s ease; width: 100%; margin-top: 5px; display: flex;
+            align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-toggle.active { background: #16a34a; }
+        .btn-toggle:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* KHU VỰC TRẮC NGHIỆM ĐỊA LÝ DÀNH CHO HỌC SINH (DẠNG ACCORDION) */
+        .quiz-panel {
+            position: absolute; bottom: 20px; right: 20px; width: 340px;
+            background: rgba(15, 23, 42, 0.95); border: 1px solid #475569;
+            border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            z-index: 10; overflow: hidden;
+        }
+        
+        /* Tiêu đề Accordion */
+        .quiz-header {
+            background: #1e293b; padding: 12px 15px; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between;
+            user-select: none; border-bottom: 1px solid #334155;
+        }
+        .quiz-title { font-size: 0.9em; color: #fbbf24; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .quiz-chevron { font-size: 0.8em; color: #94a3b8; transition: transform 0.3s ease; }
+        .quiz-panel.collapsed .quiz-chevron { transform: rotate(-180deg); }
+
+        /* Nội dung Accordion có chiều cao cố định để tránh nhảy khung hình */
+        .quiz-body {
+            padding: 15px; display: flex; flex-direction: column;
+            min-height: 255px; box-sizing: border-box;
+        }
+        .quiz-panel.collapsed .quiz-body { display: none; }
+
+        .quiz-container-inner {
+            display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between;
+        }
+        .quiz-question { font-size: 0.85em; color: #f8fafc; margin-bottom: 12px; line-height: 1.4; font-weight: 500; min-height: 38px; }
+        .quiz-options { display: flex; flex-direction: column; gap: 6px; }
+        .quiz-opt {
+            background: #1e293b; color: #cbd5e1; border: 1px solid #334155;
+            padding: 8px 12px; border-radius: 6px; text-align: left; font-size: 0.8em;
+            cursor: pointer; transition: all 0.15s ease;
+        }
+        .quiz-opt:hover { background: #334155; color: #fff; }
+        
+        /* Feedback kết quả */
+        .quiz-feedback { margin-top: 10px; font-size: 0.8em; font-weight: bold; text-align: center; padding: 8px; border-radius: 6px; line-height: 1.3; }
+        .quiz-feedback.correct { background: rgba(22, 163, 74, 0.2); color: #4ade80; border: 1px solid #16a34a; }
+        .quiz-feedback.wrong { background: rgba(220, 38, 38, 0.2); color: #f87171; border: 1px solid #dc2626; }
+        
+        .btn-next { background: #4f46e5; color: white; border: none; padding: 8px 12px; border-radius: 6px; margin-top: 10px; cursor: pointer; font-size: 0.8em; width: 100%; font-weight: bold; transition: background 0.2s; }
+        .btn-next:hover { background: #4338ca; }
+
+        /* Màn hình kết thúc chúc mừng */
+        .quiz-end-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-center: center; flex-grow: 1; padding: 10px 0;
+        }
+        .quiz-end-icon { font-size: 2.2em; color: #10b981; margin-bottom: 10px; animation: bounce 2s infinite; }
+        .quiz-end-text { font-size: 0.85em; color: #e2e8f0; margin-bottom: 15px; text-align: center; line-height: 1.4; }
+        .btn-reset { background: #475569; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8em; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        .btn-reset:hover { background: #334155; }
 
         /* Khung hiển thị tên hành tinh khi click */
         .info-popup {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 12px 20px;
-            border-radius: 8px;
-            border: 1px solid #38bdf8;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
-            z-index: 100;
-            display: none;
-            pointer-events: none;
-            max-width: 280px;
+            position: absolute; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.95);
+            padding: 12px 20px; border-radius: 8px; border: 1px solid #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); z-index: 100;
+            display: none; pointer-events: none; max-width: 280px;
         }
         .info-popup h3 { margin: 0 0 5px 0; color: #38bdf8; font-size: 1.1em; text-transform: uppercase; }
         .info-popup p { margin: 0; color: #cbd5e1; font-size: 0.85em; line-height: 1.4; }
@@ -47,31 +105,37 @@
         #localTimeLabel { font-size: 0.9em; }
         span.highlight { color: #f59e0b; font-weight: bold; }
 
-        /* Giao diện chuẩn cho MÁY TÍNH (Màn hình rộng) */
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+            60% { transform: translateY(-4px); }
+        }
+
+        /* TÁC VỤ DI ĐỘNG RESPONSIVE */
         @media (min-width: 769px) {
             .ui-panel { top: 20px; left: 20px; max-width: 300px; }
         }
-
-        /* Giao diện đặc trị cho ĐIỆN THOẠI (Màn hình hẹp đứng) */
         @media (max-width: 768px) {
-            .ui-panel { bottom: 10px; left: 10px; right: 10px; padding: 10px 15px; top: auto; }
-            h1 { font-size: 1em; margin-bottom: 5px; }
-            .controls { flex-direction: row; gap: 15px; }
-            label { font-size: 0.75em; margin-bottom: 2px; }
+            .ui-panel { bottom: 10px; left: 10px; right: 10px; padding: 10px 12px; top: auto; width: auto; max-width: none; }
+            h1 { font-size: 0.95em; margin-bottom: 3px; }
+            p.tip { display: none; }
+            .controls { flex-direction: row; gap: 10px; }
+            label { font-size: 0.7em; margin-bottom: 2px; }
             .info-popup { top: 10px; right: 10px; left: 10px; max-width: none; }
-            .status-panel { display: none; } /* Ẩn bớt giờ trên điện thoại cho đỡ chật */
+            .status-panel { display: none; }
+            .quiz-panel { top: 10px; bottom: auto; left: 10px; right: 10px; width: auto; }
         }
     </style>
 </head>
 <body>
 
     <div class="ui-panel">
-        <h1>Mô phỏng Trái Đất quanh Mặt Trời 3D</h1>
-        <p><b>Mẹo học tập:</b> Bạn có thể kéo chuột để xoay không gian, cuộn chuột để zoom và click trực tiếp vào thiên thể để xem tên!</p>
+        <h1>Mô phỏng Trái Đất & Mặt Trời</h1>
+        <p class="tip"><b>Mẹo học tập:</b> Kéo chuột để xoay không gian, cuộn chuột để zoom và click trực tiếp vào thiên thể để xem thông tin khoa học!</p>
         
         <div class="controls">
             <div style="flex:1;">
-                <label for="spinSpeedSlider">Tốc độ Trái Đất tự quay (Ngày/Đêm):</label>
+                <label for="spinSpeedSlider">Tốc độ Trái Đất tự quay:</label>
                 <input type="range" id="spinSpeedSlider" min="0" max="0.1" step="0.002" value="0.02">
             </div>
             
@@ -79,6 +143,22 @@
                 <label for="orbitSpeedSlider">Tốc độ quay quanh Mặt Trời:</label>
                 <input type="range" id="orbitSpeedSlider" min="0" max="0.02" step="0.0005" value="0.003">
             </div>
+
+            <div>
+                <label>Góc nhìn lớp học:</label>
+                <button id="btnAutoRotate" class="btn-toggle active">🔄 Tự động xoay Không gian: BẬT</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="quiz-panel" id="quizPanel">
+        <div class="quiz-header" onclick="toggleQuizAccordion()">
+            <div class="quiz-title"><i class="fa-solid fa-graduation-cap"></i> TRẮC NGHIỆM ĐỊA LÝ NHANH</div>
+            <i class="fa-solid fa-chevron-down quiz-chevron" id="quizChevron"></i>
+        </div>
+        <div class="quiz-body">
+            <div id="quizContentWrapper" class="quiz-container-inner">
+                </div>
         </div>
     </div>
 
@@ -106,12 +186,15 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
 
-        // KÍCH HOẠT TÍNH NĂNG XOAY ĐIỀU KHIỂN CAMERA
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.maxDistance = 150;
         controls.minDistance = 15;
+
+        // Mặc định bật chế độ tự xoay camera không gian quanh trung tâm
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
 
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(ambientLight);
@@ -162,32 +245,112 @@
         const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
         scene.add(orbitLine);
 
-        // TRÁI ĐẤT
+        // TRÁI ĐẤT ĐA TẦNG ĐỊA HÌNH SẮC NÉT
         const earthCanvas = document.createElement('canvas');
-        earthCanvas.width = 256; earthCanvas.height = 128;
+        earthCanvas.width = 1024;
+        earthCanvas.height = 512;
         const earthCtx = earthCanvas.getContext('2d');
-        earthCtx.fillStyle = '#2563eb'; 
-        earthCtx.fillRect(0, 0, 256, 128);
-        
-        earthCtx.fillStyle = '#16a34a'; 
-        for (let i = 0; i < 12; i++) {
+
+        const oceanGradient = earthCtx.createRadialGradient(earthCanvas.width/2, earthCanvas.height/2, 10, earthCanvas.width/2, earthCanvas.height/2, earthCanvas.width);
+        oceanGradient.addColorStop(0, '#1d4ed8'); 
+        oceanGradient.addColorStop(0.5, '#1e3a8a'); 
+        oceanGradient.addColorStop(1, '#0f172a'); 
+        earthCtx.fillStyle = oceanGradient;
+        earthCtx.fillRect(0, 0, earthCanvas.width, earthCanvas.height);
+
+        earthCtx.strokeStyle = 'rgba(30, 64, 175, 0.4)';
+        earthCtx.lineWidth = 1.5;
+        for (let i = 0; i < 30; i++) {
             earthCtx.beginPath();
-            earthCtx.arc(Math.random() * 256, Math.random() * 128, 20 + Math.random() * 30, 0, Math.PI * 2);
-            earthCtx.fill();
+            earthCtx.arc(Math.random() * earthCanvas.width, Math.random() * earthCanvas.height, Math.random() * 150 + 50, 0, Math.PI * 2);
+            earthCtx.stroke();
         }
-        earthCtx.fillStyle = '#ca8a04'; 
-        for (let i = 0; i < 8; i++) {
+
+        const geographicalFeatures = [
+            { name: "Nam Cuc", points: [[0, 460], [150, 455], [300, 450], [450, 458], [600, 452], [750, 450], [900, 455], [1024, 460], [1024, 512], [0, 512]], type: "ice" },
+            { name: "Greenland", points: [[360, 45], [405, 35], [415, 70], [385, 95], [360, 75]], type: "ice" },
+            { name: "Bac My", points: [[130, 110], [150, 80], [200, 55], [260, 50], [285, 45], [315, 65], [345, 55], [380, 85], [375, 110], [335, 125], [325, 145], [335, 175], [345, 205], [315, 235], [310, 255], [285, 245], [275, 275], [255, 285], [245, 275], [235, 235], [195, 215], [145, 175], [125, 135]], type: "land" },
+            { name: "Nam My", points: [[255, 285], [280, 275], [305, 280], [330, 305], [355, 330], [375, 350], [345, 400], [315, 450], [295, 485], [285, 485], [285, 440], [265, 400], [250, 350], [245, 310]], type: "land" },
+            { name: "Chau Phi", points: [[435, 230], [495, 220], [555, 235], [570, 250], [600, 290], [595, 330], [570, 410], [555, 440], [540, 410], [500, 340], [465, 320], [425, 290], [420, 255]], type: "land" },
+            { name: "A Au", points: [[405, 185], [425, 145], [450, 115], [495, 105], [510, 65], [540, 65], [560, 100], [590, 80], [640, 60], [740, 60], [840, 60], [910, 80], [930, 120], [890, 160], [850, 160], [830, 200], [840, 230], [800, 250], [780, 275], [775, 310], [760, 295], [750, 285], [735, 275], [720, 315], [690, 280], [660, 285], [660, 260], [600, 240], [580, 220], [545, 220], [500, 215], [465, 230], [435, 220], [405, 210]], type: "land" },
+            { name: "Viet Nam", points: [[767, 275], [772, 277], [775, 282], [774, 286], [771, 289], [773, 293], [775, 297], [774, 301], [771, 303], [767, 303], [766, 299], [768, 295], [770, 291], [767, 284]], type: "vietnam" },
+            { name: "Luc Dia Uc", points: [[765, 380], [805, 360], [845, 375], [865, 410], [845, 440], [785, 435], [765, 410]], type: "land" },
+            { name: "Dao Madagascar", points: [[595, 380], [605, 375], [600, 410], [590, 405]], type: "land" },
+            { name: "Nhat Ban", points: [[875, 160], [895, 180], [890, 205], [870, 180]], type: "land" }
+        ];
+
+        function drawGeoPolygon(points, type) {
+            if (type === 'land' || type === 'vietnam') {
+                earthCtx.beginPath();
+                earthCtx.moveTo(points[0][0], points[0][1]);
+                for (let i = 1; i < points.length; i++) { earthCtx.lineTo(points[i][0], points[i][1]); }
+                earthCtx.closePath();
+                earthCtx.strokeStyle = 'rgba(20, 184, 166, 0.4)'; 
+                earthCtx.lineWidth = 8;
+                earthCtx.lineJoin = 'round';
+                earthCtx.stroke();
+            }
+
             earthCtx.beginPath();
-            earthCtx.arc(Math.random() * 256, Math.random() * 128, 10 + Math.random() * 15, 0, Math.PI * 2);
+            earthCtx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) { earthCtx.lineTo(points[i][0], points[i][1]); }
+            earthCtx.closePath();
+
+            if (type === 'ice') {
+                const iceGrad = earthCtx.createLinearGradient(0, points[0][1], 0, points[points.length-1][1]);
+                iceGrad.addColorStop(0, '#f1f5f9');
+                iceGrad.addColorStop(1, '#cbd5e1');
+                earthCtx.fillStyle = iceGrad;
+            } else if (type === 'vietnam') {
+                earthCtx.fillStyle = '#10b981';
+            } else {
+                earthCtx.fillStyle = '#15803d';
+            }
             earthCtx.fill();
+
+            if (type === 'land') {
+                earthCtx.save();
+                earthCtx.clip();
+                earthCtx.fillStyle = '#b45309'; 
+                for (let i = 0; i < 6; i++) {
+                    earthCtx.beginPath();
+                    earthCtx.arc(points[0][0] + (Math.random() - 0.5) * 160, points[0][1] + (Math.random() - 0.5) * 100, Math.random() * 45 + 15, 0, Math.PI * 2);
+                    earthCtx.fill();
+                }
+                earthCtx.strokeStyle = '#451a03';
+                earthCtx.lineWidth = 3;
+                earthCtx.beginPath();
+                earthCtx.moveTo(points[0][0], points[0][1]);
+                for (let i = 1; i < points.length; i += 2) { earthCtx.lineTo(points[i][0], points[i][1]); }
+                earthCtx.stroke();
+                earthCtx.restore();
+            }
         }
+
+        geographicalFeatures.forEach(feature => { drawGeoPolygon(feature.points, feature.type); });
+
+        // Quần đảo Hoàng Sa & Trường Sa đầy đủ chủ quyền Việt Nam
+        earthCtx.fillStyle = '#f59e0b'; earthCtx.strokeStyle = '#10b981'; earthCtx.lineWidth = 1;
+        earthCtx.beginPath(); earthCtx.arc(788, 274, 3, 0, Math.PI * 2); earthCtx.arc(792, 276, 2.5, 0, Math.PI * 2); earthCtx.fill(); earthCtx.stroke();
+        earthCtx.beginPath(); earthCtx.arc(794, 310, 2.5, 0, Math.PI * 2); earthCtx.arc(799, 314, 2, 0, Math.PI * 2); earthCtx.arc(802, 312, 1.8, 0, Math.PI * 2); earthCtx.fill(); earthCtx.stroke();
+
+        // Kinh vĩ tuyến & xích đạo học tập
+        earthCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; earthCtx.lineWidth = 1; earthCtx.setLineDash([4, 8]);
+        for (let y = 0; y < earthCanvas.height; y += earthCanvas.height / 6) {
+            earthCtx.beginPath(); earthCtx.moveTo(0, y); earthCtx.lineTo(earthCanvas.width, y); earthCtx.stroke();
+        }
+        for (let x = 0; x < earthCanvas.width; x += earthCanvas.width / 12) {
+            earthCtx.beginPath(); earthCtx.moveTo(x, 0); earthCtx.lineTo(x, earthCanvas.height); earthCtx.stroke();
+        }
+        earthCtx.strokeStyle = 'rgba(34, 211, 238, 0.25)'; earthCtx.lineWidth = 1.5; earthCtx.setLineDash([]);
+        earthCtx.beginPath(); earthCtx.moveTo(0, earthCanvas.height / 2); earthCtx.lineTo(earthCanvas.width, earthCanvas.height / 2); earthCtx.stroke();
 
         const earthTexture = new THREE.CanvasTexture(earthCanvas);
         const earthGeometry = new THREE.SphereGeometry(3.2, 32, 32);
         const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.5 });
         const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
 
-        // TRỤC TRÁI ĐẤT (AXIS LINE)
+        // Trục nghiêng Trái Đất
         const axisGeometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, -5.5, 0),
             new THREE.Vector3(0, 5.5, 0)
@@ -198,13 +361,11 @@
         const earthGroup = new THREE.Group();
         earthGroup.add(earthMesh);
         earthGroup.add(axisLine);
-        
-        earthGroup.rotation.z = 0.41; 
+        earthGroup.rotation.z = 0.41; // Nghiêng xấp xỉ 23.5 độ
 
         const earthPivot = new THREE.Object3D();
         scene.add(earthPivot);
         earthPivot.add(earthGroup);
-        
         earthGroup.position.set(orbitRadius, 0, 0);
 
         camera.lookAt(10, 0, 0);
@@ -221,8 +382,7 @@
         const popupDesc = document.getElementById('popupDesc');
 
         window.addEventListener('click', (event) => {
-            // Loại trừ click trúng bảng điều khiển menu
-            if (event.target.closest('.ui-panel')) return;
+            if (event.target.closest('.ui-panel') || event.target.closest('.quiz-panel')) return;
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -247,10 +407,180 @@
             }
         });
 
+        // ĐIỀU KHIỂN XOAY TỰ ĐỘNG KHÔNG GIAN
+        const btnAutoRotate = document.getElementById('btnAutoRotate');
+        btnAutoRotate.addEventListener('click', () => {
+            controls.autoRotate = !controls.autoRotate;
+            if(controls.autoRotate) {
+                btnAutoRotate.innerText = "🔄 Tự động xoay Không gian: BẬT";
+                btnAutoRotate.classList.add('active');
+            } else {
+                btnAutoRotate.innerText = "⏸️ Tự động xoay Không gian: TẮT";
+                btnAutoRotate.classList.remove('active');
+            }
+        });
+
+        // LOGIC HỆ THỐNG ÂM THANH SƯ PHẠM (KHÔNG CẦN FILE MP3 NGOÀI)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // Nốt Đô (C5)
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // Nốt Mi (E5)
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } else {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // GIỮ NGUYÊN VẸN TOÀN BỘ DỮ LIỆU CÂU HỎI TRẮC NGHIỆM ĐỊA LÝ GỐC CỦA THẦY
+        const quizData = [
+            {
+                q: "Trái Đất tự quay quanh trục của nó theo hướng nào?",
+                a: ["Từ Đông sang Tây", "Từ Tây sang Đông", "Từ Bắc xuống Nam", "Theo hướng ngẫu nhiên"],
+                correct: 1,
+                exp: "Đúng! Trái Đất tự quay từ Tây sang Đông, do đó chúng ta luôn thấy Mặt Trời mọc ở hướng Đông."
+            },
+            {
+                q: "Trục của Trái Đất khi nghiêng trên mặt phẳng quỹ đạo tạo thành một góc bao nhiêu độ?",
+                a: ["23.5°", "66.5°", "0° (Thẳng đứng)", "45°"],
+                correct: 0,
+                exp: "Chính xác! Trục Trái Đất nghiêng một góc cố định là 23.5° tạo ra hiện tượng bốn mùa."
+            },
+            {
+                q: "Thời gian để Trái Đất hoàn thành một vòng chuyển động quanh Mặt Trời là bao lâu?",
+                a: ["24 giờ", "30 ngày", "365 ngày và 6 giờ", "12 tháng liền"],
+                correct: 2,
+                exp: "Tuyệt vời! Thời gian này tạo nên một năm thiên văn, phần dư 6 giờ gộp lại cứ 4 năm tạo thành 1 năm nhuận."
+            },
+            {
+                q: "Hiện tượng ngày đêm dài ngắn khác nhau ở hai bán cầu là do nguyên nhân nào?",
+                a: ["Mặt Trời thay đổi nhiệt độ", "Trái Đất có hình cầu trục đứng", "Trục Trái Đất nghiêng và không đổi hướng khi chuyển động", "Do khoảng cách Trái Đất đến Mặt Trăng"],
+                correct: 2,
+                exp: "Chuẩn xác! Vì trục nghiêng không đổi hướng nên hai nửa bán cầu luân phiên ngả về phía Mặt Trời gây ngày đêm dài ngắn khác nhau."
+            }
+        ];
+
+        let currentQuizIndex = 0;
+
+        // ĐIỀU KHIỂN ĐÓNG MỞ ACCORDION PANEL TRẮC NGHIỆM
+        function toggleQuizAccordion() {
+            const panel = document.getElementById('quizPanel');
+            panel.classList.toggle('collapsed');
+        }
+
+        // TẢI NỘI DUNG CÂU HỎI MỚI CHUẨN SƯ PHẠM
+        function loadQuestion() {
+            const wrapper = document.getElementById('quizContentWrapper');
+            
+            if (currentQuizIndex >= quizData.length) {
+                // Hiển thị màn hình kết thúc cố định kích thước
+                renderQuizEndScreen();
+                return;
+            }
+
+            const quiz = quizData[currentQuizIndex];
+            
+            // Xây dựng lại cấu trúc HTML bên trong
+            wrapper.innerHTML = `
+                <div class="quiz-question" id="quizQuestion"></div>
+                <div class="quiz-options" id="quizOptions"></div>
+                <div id="quizFeedback" class="quiz-feedback" style="display: none;"></div>
+                <button id="btnNextQuestion" class="btn-next" style="display: none;">Câu tiếp theo ➡️</button>
+            `;
+
+            document.getElementById('quizQuestion').innerText = `Câu ${currentQuizIndex + 1}: ${quiz.q}`;
+            const optionsContainer = document.getElementById('quizOptions');
+
+            quiz.a.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-opt';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex) {
+            const quiz = quizData[currentQuizIndex];
+            const feedback = document.getElementById('quizFeedback');
+            const options = document.getElementById('quizOptions').children;
+
+            // Vô hiệu hóa việc bấm lại sau khi đã chọn
+            for (let btn of options) { btn.disabled = true; }
+
+            if (selectedIndex === quiz.correct) {
+                feedback.innerText = quiz.exp;
+                feedback.className = 'quiz-feedback correct';
+                playSound('correct');
+            } else {
+                feedback.innerText = `Chưa đúng rồi! Đáp án chuẩn là: ${quiz.a[quiz.correct]}`;
+                feedback.className = 'quiz-feedback wrong';
+                playSound('wrong');
+            }
+            
+            feedback.style.display = 'block';
+            
+            const nextBtn = document.getElementById('btnNextQuestion');
+            if (currentQuizIndex + 1 === quizData.length) {
+                nextBtn.innerText = "Xem kết quả tổng quan 🏆";
+            } else {
+                nextBtn.innerText = "Câu tiếp theo ➡️";
+            }
+            
+            nextBtn.style.display = 'block';
+            nextBtn.onclick = () => {
+                currentQuizIndex++;
+                loadQuestion();
+            };
+        }
+
+        // Giao diện kết thúc học liệu trắc nghiệm (Cố định chiều cao, có nút làm lại)
+        function renderQuizEndScreen() {
+            const wrapper = document.getElementById('quizContentWrapper');
+            wrapper.innerHTML = `
+                <div class="quiz-end-screen">
+                    <i class="fa-solid fa-award quiz-end-icon"></i>
+                    <div class="quiz-end-text">
+                        <b>Chúc mừng các em đã hoàn thành bài tập!</b><br>
+                        Hãy tiếp tục quan sát mô phỏng để khắc sâu kiến thức lý thuyết vừa học nhé.
+                    </div>
+                    <button class="btn-reset" onclick="resetQuizEngine()">
+                        <i class="fa-solid fa-arrows-rotate"></i> Làm lại bài tập
+                    </button>
+                </div>
+            `;
+        }
+
+        function resetQuizEngine() {
+            currentQuizIndex = 0;
+            loadQuestion();
+        }
+
+        // Khởi động câu hỏi đầu tiên
+        loadQuestion();
+
+        // VÒNG LẶP HÌNH ẢNH ANIMATION TRONG THREE.JS
         function animate() {
             requestAnimationFrame(animate);
 
-            controls.update(); // Cập nhật chuyển động xoay camera liên tục
+            controls.update(); 
 
             const now = new Date();
             if (localTimeSpan) localTimeSpan.innerText = now.toLocaleTimeString('vi-VN');
